@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from settings import *
 
 # Circularity filter bounds
 circularity_bounds = {"lower": 0.0, "upper": 1.5}
@@ -8,6 +9,43 @@ circularity_bounds = {"lower": 0.0, "upper": 1.5}
 points = []
 transform_matrix = None
 
+# def scale_coordinates(coords, target_width, target_height):
+#     """
+#     Scale coordinates to fit within a specified plane size.
+
+#     Args:
+#         original_coords (tuple): The (x, y) coordinates in the original plane.
+#         target_width (int): The width of the target plane.
+#         target_height (int): The height of the target plane.
+
+#     Returns:
+#         tuple: Scaled (x, y) coordinates.
+#     """
+#     global transform_matrix, points
+#     if transform_matrix is None:
+#         raise ValueError("Transform matrix is not calculated yet.")
+
+#     # Map the original coordinates to the warped plane
+#     p1_transform_coords = cv2.perspectiveTransform(np.array([[points[0]]], dtype="float32"),
+#                                                 transform_matrix)[0][0]
+#     p2_transform_coords = cv2.perspectiveTransform(np.array([[points[1]]], dtype="float32"),
+#                                                 transform_matrix)[0][0]
+#     p3_transform_coords = cv2.perspectiveTransform(np.array([[points[2]]], dtype="float32"),
+#                                                 transform_matrix)[0][0]
+#     print(f"{p1_transform_coords=}")
+#     print(f"{p2_transform_coords=}")
+#     print(f"{p3_transform_coords=}")
+#     transform_height = p2_transform_coords[1] - p1_transform_coords[1]
+#     transform_width = p2_transform_coords[0] - p3_transform_coords[0]
+
+#     # Scale the coordinates to fit the target dimensions
+#     scale_x = target_width / transform_width
+#     scale_y = target_height / transform_height
+
+#     scaled_x = int(coords * scale_x)
+#     scaled_y = int(coords * scale_y)
+# 
+    # return scaled_x, scaled_y
 
 def update_lower_bound(val):
     circularity_bounds["lower"] = val / 100.0
@@ -77,7 +115,7 @@ def detect_yellow_ball_real_time():
         if len(points) == 4 and transform_matrix is None:
             # Define the plane in the warped image
             warped_plane = np.array([
-                [0, 0], [800, 0], [800, 800], [0, 800]
+                [BOARD_WIDTH_MM, BOARD_HEIGHT_MM], [BOARD_WIDTH_MM, 0], [0, 0], [0, BOARD_HEIGHT_MM]
             ], dtype="float32")
             points_array = np.array(points, dtype="float32")
             transform_matrix = cv2.getPerspectiveTransform(points_array, warped_plane)
@@ -107,6 +145,7 @@ def detect_yellow_ball_real_time():
         for contour in contours:
             # Calculate contour area and perimeter
             area = cv2.contourArea(contour)
+            
             perimeter = cv2.arcLength(contour, True)
             circularity = 4 * np.pi * (area / (perimeter ** 2)) if perimeter > 0 else 0
 

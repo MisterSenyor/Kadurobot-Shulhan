@@ -23,7 +23,7 @@ def mouse_callback(event, x, y, flags, param):
     """
     global points
     if event == cv2.EVENT_LBUTTONDOWN and len(points) < 4:
-        poinxts.append((x, y))
+        points.append((x, y))
         print(f"Point {len(points)}: {x}, {y}")
     elif event == cv2.EVENT_RBUTTONDOWN and points:
         popped_point = points.pop()

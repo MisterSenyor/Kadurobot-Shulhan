@@ -24,7 +24,7 @@ def main():
             s1.target_deg(0)
             time.sleep(5.0)
 
-def
+
 
 if __name__ == "__main__":
     main()

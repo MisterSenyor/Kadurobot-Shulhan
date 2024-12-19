@@ -81,7 +81,11 @@ def ensure_on_screen(frame, text, x, y, font_scale, thickness):
     return x, y
 
 
-def detect_yellow_ball_real_time():
+def detect_yellow_ball_real_time(func=None):
+    """
+    
+    @param func - a function to run given the ball position (a single tuple input)
+    """
     global points, transform_matrix
 
     # Open a connection to the default camera
@@ -192,6 +196,9 @@ def detect_yellow_ball_real_time():
             if text_pos:
                 x_pos, y_pos = ensure_on_screen(frame, text_pos, x, y - 60, 0.5, 1)
                 cv2.putText(frame, text_pos, (x_pos, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            
+            if func is not None:
+                func(ball_position)
 
         # Display the frame with detections
         cv2.imshow("Yellow Ball Detection", frame)

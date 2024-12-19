@@ -1,7 +1,15 @@
 import time
 import keyboard
 import pyfirmata
+import cv
+import stepper_module
 
+def controller(ball_pos):
+    print("CONTROLLING:")
+    print(f"{ball_pos=}")
+
+def game_main():
+    cv.detect_yellow_ball_real_time(controller)
 
 def main():
 

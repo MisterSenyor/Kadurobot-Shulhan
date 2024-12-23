@@ -1,12 +1,10 @@
 import time
 from tkinter.constants import RIGHT
-from setuptools.command.easy_install import current_umask
-
 import keyboard
 import pyfirmata
-import cv
+#import cv
 from settings import RIGHT, LEFT, STEPS_PER_SECOND, CM_PER_STEPS
-import stepper_module
+PORT = "COM8"
 
 
 def controller(ball_pos):
@@ -18,7 +16,7 @@ def game_main():
 
 def main():
     # set up arduino board
-    board = pyfirmata.Arduino('COM13')
+    board = pyfirmata.Arduino(PORT)
     current_voltage = 0
 
     # start while loop to keep blinking indefinitely

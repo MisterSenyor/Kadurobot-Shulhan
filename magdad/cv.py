@@ -108,7 +108,7 @@ class BallHandler:
         ret, frame = self.cap.read()
         if not ret:
             print("Failed to grab frame")
-            break
+            self.close_camera()
 
         # Draw the selected points on the frame
         for i, point in enumerate(points):

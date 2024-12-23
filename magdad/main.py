@@ -1,26 +1,24 @@
 import time
 from tkinter.constants import RIGHT
+from setuptools.command.easy_install import current_umask
 
 import keyboard
 import pyfirmata
 import cv
+from settings import RIGHT, LEFT, STEPS_PER_SECOND, CM_PER_STEPS
 import stepper_module
+
 
 def controller(ball_pos):
     print("CONTROLLING:")
     print(f"{ball_pos=}")
 
 def game_main():
-    cv.detect_yellow_ball_real_time(controller)from setuptools.command.easy_install import current_umask
-
-LEFT = 0
-RIGHT = 1
-
+    cv.detect_yellow_ball_real_time(controller)
 
 def main():
     # set up arduino board
-    board = pyfirmata.Arduino('COM8')
-    steps_per_second = 100
+    board = pyfirmata.Arduino('COM13')
     current_voltage = 0
 
     # start while loop to keep blinking indefinitely
@@ -38,17 +36,19 @@ def main():
         while keyboard.is_pressed('space'):
             board.digital[5].write(1)  # turn pin 1
             # 3 ON
-            time.sleep(1 / steps_per_second)  # wait 1/2 second
+            time.sleep(1 / STEPS_PER_SECOND)  # wait 1/2 second
             board.digital[5].write(0)  # turn pin 13 OFF
-            time.sleep(1 / steps_per_second)  # wait 1/2 second
-        if keyboard.is_pressed('V'):
-            steps_per_second = int(input("Enter the new velocity: ")[1:])
+            time.sleep(1 / STEPS_PER_SECOND)  # wait 1/2 second
+        # if keyboard.is_pressed('V'):
+        #     STEPS_PER_SECOND = int(input("Enter the new velocity: ")[1:])
         if keyboard.is_pressed('S'):
             for _ in range(100):
-                current_voltage = step(board, 5, 3, 100, LEFT, current_voltage)
+                current_voltage = step(board, 5, 3, STEPS_PER_SECOND, LEFT, current_voltage)
         if keyboard.is_pressed('C'):
             current_voltage += 1
             current_voltage %= 2
+        if keyboard.is_pressed('M'):
+            move_centimeters(10, board, 5, 3, STEPS_PER_SECOND, LEFT)
 
 
 def step(board, step_pin, dir_pin, velocity, direction, current_volt):
@@ -58,11 +58,10 @@ def step(board, step_pin, dir_pin, velocity, direction, current_volt):
     return (current_volt + 1) % 2
 
 
-def move_centimeters(centimeters, steps_per_cm, board):
+def move_centimeters(centimeters, board, step_pin, dir_pin, velocity, direction):
     current_voltage = 0
-    for _ in range(centimeters):
-        for _ in range(steps_per_cm):
-            current_voltage = step(board, 5, 3, 100, RIGHT, current_voltage)
+    for _ in range(round(centimeters / CM_PER_STEPS)):
+        current_voltage = step(board, step_pin, dir_pin, velocity, direction, current_voltage)
 
 
 

@@ -3,7 +3,7 @@ import settings
 import stepper_api
 
 
-def main1():
+def main():
     ball_handler = cv.BallHandler()
     stepper_handler = stepper_api.StepperHandler(settings.PORT)
     players_offset = 0
@@ -21,4 +21,4 @@ def main1():
 
 
 if __name__ == "__main__":
-    main1()
+    main()

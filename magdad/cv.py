@@ -9,6 +9,39 @@ circularity_bounds = {"lower": 0.0, "upper": 1.5}
 points = []
 transform_matrix = None
 
+def update_lower_bound(val):
+    circularity_bounds["lower"] = val / 100.0
+
+
+def update_upper_bound(val):
+    circularity_bounds["upper"] = val / 100.0
+
+
+def mouse_callback(event, x, y, flags, param):
+    """
+    Callback function to record mouse clicks.
+    """
+    global points
+    if event == cv2.EVENT_LBUTTONDOWN and len(points) < 4:
+        points.append((x, y))
+        print(f"Point {len(points)}: {x}, {y}")
+    elif event == cv2.EVENT_RBUTTONDOWN and points:
+        popped_point = points.pop()
+        print(f"Removed point: {popped_point}")
+
+
+def ensure_on_screen(frame, text, x, y, font_scale, thickness):
+    """Ensure text or point is displayed within screen boundaries."""
+    (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+    frame_height, frame_width = frame.shape[:2]
+
+    if x + text_width > frame_width:
+        x = frame_width - text_width - 5
+    if y - text_height < 0:
+        y = text_height + 5
+
+    return x, y
+
 # def scale_coordinates(coords, target_width, target_height):
 #     """
 #     Scale coordinates to fit within a specified plane size.
@@ -46,64 +79,33 @@ transform_matrix = None
 #     scaled_y = int(coords * scale_y)
 # 
     # return scaled_x, scaled_y
+class BallHandler:
+    def __init__(self):
+        self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # Use DirectShow to speed up camera initialization
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
-def update_lower_bound(val):
-    circularity_bounds["lower"] = val / 100.0
+        # Create a window with trackbars for circularity filter
+        cv2.namedWindow("Settings")
+        cv2.createTrackbar("Lower Circularity", "Settings", int(circularity_bounds["lower"] * 100), 150, update_lower_bound)
+        cv2.createTrackbar("Upper Circularity", "Settings", int(circularity_bounds["upper"] * 100), 150, update_upper_bound)
 
-
-def update_upper_bound(val):
-    circularity_bounds["upper"] = val / 100.0
-
-
-def mouse_callback(event, x, y, flags, param):
-    """
-    Callback function to record mouse clicks.
-    """
-    global points
-    if event == cv2.EVENT_LBUTTONDOWN and len(points) < 4:
-        points.append((x, y))
-        print(f"Point {len(points)}: {x}, {y}")
-    elif event == cv2.EVENT_RBUTTONDOWN and points:
-        popped_point = points.pop()
-        print(f"Removed point: {popped_point}")
+        # Set mouse callback to get points
+        cv2.namedWindow("Yellow Ball Detection")
+        cv2.setMouseCallback("Yellow Ball Detection", mouse_callback)
+        
 
 
-def ensure_on_screen(frame, text, x, y, font_scale, thickness):
-    """Ensure text or point is displayed within screen boundaries."""
-    (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
-    frame_height, frame_width = frame.shape[:2]
+    def detect_yellow_ball(self, func=None):
+        """
+        
+        @param func - a function to run given the ball position (a single tuple input)
+        """
+        global points, transform_matrix
 
-    if x + text_width > frame_width:
-        x = frame_width - text_width - 5
-    if y - text_height < 0:
-        y = text_height + 5
+        # Open a connection to the default camera
 
-    return x, y
-
-
-def detect_yellow_ball_real_time(func=None):
-    """
-    
-    @param func - a function to run given the ball position (a single tuple input)
-    """
-    global points, transform_matrix
-
-    # Open a connection to the default camera
-    cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # Use DirectShow to speed up camera initialization
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
-
-    # Create a window with trackbars for circularity filter
-    cv2.namedWindow("Settings")
-    cv2.createTrackbar("Lower Circularity", "Settings", int(circularity_bounds["lower"] * 100), 150, update_lower_bound)
-    cv2.createTrackbar("Upper Circularity", "Settings", int(circularity_bounds["upper"] * 100), 150, update_upper_bound)
-
-    # Set mouse callback to get points
-    cv2.namedWindow("Yellow Ball Detection")
-    cv2.setMouseCallback("Yellow Ball Detection", mouse_callback)
-
-    while True:
-        ret, frame = cap.read()
+        ret, frame = self.cap.read()
         if not ret:
             print("Failed to grab frame")
             break
@@ -178,6 +180,8 @@ def detect_yellow_ball_real_time(func=None):
                 ball_position = cv2.perspectiveTransform(
                     np.array([[ball_center]], dtype="float32"), transform_matrix
                 )[0][0]
+            else:
+                ball_position = ball_center
 
             # Draw the green bounding box around the best fit
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
@@ -199,6 +203,8 @@ def detect_yellow_ball_real_time(func=None):
             
             if func is not None:
                 func(ball_position)
+            
+            return ball_position
 
         # Display the frame with detections
         cv2.imshow("Yellow Ball Detection", frame)
@@ -210,11 +216,10 @@ def detect_yellow_ball_real_time(func=None):
 
         # Exit loop when 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    # Release the camera and close all OpenCV windows
-    cap.release()
-    cv2.destroyAllWindows()
-
-# Run the real-time detection
-detect_yellow_ball_real_time()
+            self.close_camera()
+        return (None, None)
+        
+        
+    def close_camera(self):
+        self.cap.release()
+        cv2.destroyAllWindows()

@@ -203,8 +203,9 @@ class BallHandler:
             
             if func is not None:
                 func(ball_position)
-            
-            return ball_position
+
+        else:
+            ball_position = (None, None)
 
         # Display the frame with detections
         cv2.imshow("Yellow Ball Detection", frame)
@@ -217,9 +218,8 @@ class BallHandler:
         # Exit loop when 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             self.close_camera()
-        return (None, None)
-        
-        
+        return ball_position
+
     def close_camera(self):
         self.cap.release()
         cv2.destroyAllWindows()

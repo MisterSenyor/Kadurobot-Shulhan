@@ -10,14 +10,14 @@ def main():
     third = settings.BOARD_HEIGHT_MM // 3
     while True:
         coordinates = ball_handler.detect_yellow_ball()
-        moving_cms = coordinates[1] % third
-        actual_moving_cms = moving_cms - players_offset
+        moving_mms = coordinates[1] % third
+        actual_moving_cms = moving_mms - players_offset
         if actual_moving_cms > 0:
             direction = settings.RIGHT
         else:
             direction = settings.LEFT
-        players_offset = moving_cms
-        stepper_handler.move_centimeters(abs(actual_moving_cms), settings.VELOCITY, direction)
+        players_offset = moving_mms
+        stepper_handler.move_centimeters(abs(actual_moving_cms) / 10, settings.VELOCITY, direction)
 
 
 if __name__ == "__main__":

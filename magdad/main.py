@@ -4,8 +4,14 @@ import keyboard
 import pyfirmata
 #import cv
 from settings import RIGHT, LEFT, STEPS_PER_SECOND, CM_PER_STEPS
+import cv
 PORT = "COM8"
 
+
+def main2():
+    ball_handler = cv.BallHandler()
+    while True:
+        print(ball_handler.detect_yellow_ball())
 
 def controller(ball_pos):
     print("CONTROLLING:")
@@ -64,4 +70,4 @@ def move_centimeters(centimeters, board, step_pin, dir_pin, velocity, direction)
 
 
 if __name__ == "__main__":
-    main()
+    main2()

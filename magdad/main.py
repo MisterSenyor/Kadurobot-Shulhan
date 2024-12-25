@@ -70,4 +70,4 @@ def move_centimeters(centimeters, board, step_pin, dir_pin, velocity, direction)
 
 
 if __name__ == "__main__":
-    main2()
+    main()

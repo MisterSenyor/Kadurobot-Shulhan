@@ -93,8 +93,37 @@ class BallHandler:
         # Set mouse callback to get points
         cv2.namedWindow("Yellow Ball Detection")
         cv2.setMouseCallback("Yellow Ball Detection", mouse_callback)
-        
 
+
+    def choose_points(self):
+        global points, transform_matrix
+
+        # Open a connection to the default camera
+
+        ret, frame = self.cap.read()
+        if not ret:
+            print("Failed to grab frame")
+            self.close_camera()
+
+        # Draw the selected points on the frame
+        for i, point in enumerate(points):
+            cv2.circle(frame, point, 5, (0, 0, 255), -1)  # Red dot for each point
+            text = f"P{i + 1}"
+            x, y = ensure_on_screen(frame, text, point[0] + 10, point[1] - 10, 0.5, 1)
+            cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+
+        # If 4 points are selected, calculate the perspective transform matrix
+        if len(points) == 4 and transform_matrix is None:
+            # Define the plane in the warped image
+            warped_plane = np.array([
+                [BOARD_WIDTH_MM, BOARD_HEIGHT_MM], [BOARD_WIDTH_MM, 0], [0, 0], [0, BOARD_HEIGHT_MM]
+            ], dtype="float32")
+            points_array = np.array(points, dtype="float32")
+            transform_matrix = cv2.getPerspectiveTransform(points_array, warped_plane)
+            print("Perspective transformation matrix calculated.")
+            return
+
+        cv2.imshow("Yellow Ball Detection", frame)
 
     def detect_yellow_ball(self, func=None):
         """

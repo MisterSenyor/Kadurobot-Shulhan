@@ -32,6 +32,7 @@ class BallHandler:
         self.circularity_filter = CircularityFilter()
         self.point_selector = PointSelector()
         self.transform_matrix = None
+        self.cap = cv2.VideoCapture(0)
 
         cv2.namedWindow("Settings")
         cv2.createTrackbar("Lower Circularity", "Settings", int(self.circularity_filter.bounds["lower"] * 100), 150, self.circularity_filter.update_lower_bound)
@@ -42,7 +43,7 @@ class BallHandler:
 
         self.board_width_mm = board_width_mm
         self.board_height_mm = board_height_mm
-
+ 
     def calculate_transform_matrix(self):
         if len(self.point_selector.points) == 4:
             warped_plane = np.array([

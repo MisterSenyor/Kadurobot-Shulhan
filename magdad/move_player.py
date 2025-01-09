@@ -21,6 +21,7 @@ def main():
         if coordinates[1] is None:
             continue
         moving_mms = coordinates[1] % third
+        #moving_mms = coordinates[1]
         actual_moving_mms = moving_mms - players_offset
         if actual_moving_mms > 0:
             direction = settings.LEFT
@@ -28,6 +29,8 @@ def main():
             direction = settings.RIGHT
         players_offset = moving_mms
         print("moving")
+        if abs(actual_moving_mms) < settings.MOVING_THRSHOLD:
+            continue
         stepper_handler.move_centimeters(abs(actual_moving_mms) / 10, settings.VELOCITY, direction)
         #time.sleep(0.5)
 

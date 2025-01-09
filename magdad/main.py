@@ -36,6 +36,14 @@ def main():
         if keyboard.is_pressed('down'):
             board.digital[3].write(0)
             current_voltage = 0
+
+        if keyboard.is_pressed('right'):
+            board.digital[2].write(0)
+            current_voltage2 = 0
+
+        if keyboard.is_pressed('left'):
+            board.digital[2].write(1)
+            current_voltage2 = 1
         #print("hi")
         while keyboard.is_pressed('space'):
             board.digital[5].write(1)  # turn pin 1
@@ -43,11 +51,20 @@ def main():
             time.sleep(1 / STEPS_PER_SECOND)  # wait 1/2 second
             board.digital[5].write(0)  # turn pin 13 OFF
             time.sleep(1 / STEPS_PER_SECOND)  # wait 1/2 second
+        while keyboard.is_pressed('tab'):
+            board.digital[6].write(1)  # turn pin 1
+            # 3 ON
+            time.sleep(1 / STEPS_PER_SECOND)  # wait 1/2 second
+            board.digital[6].write(0)  # turn pin 13 OFF
+            time.sleep(1 / STEPS_PER_SECOND)  # wait 1/2 second
         # if keyboard.is_pressed('V'):
         #     STEPS_PER_SECOND = int(input("Enter the new velocity: ")[1:])
         if keyboard.is_pressed('S'):
             for _ in range(100):
                 current_voltage = step(board, 5, 3, STEPS_PER_SECOND, LEFT, current_voltage)
+        if keyboard.is_pressed('D'):
+            for _ in range(100):
+                current_voltage2 = step(board, 6, 2, STEPS_PER_SECOND, RIGHT, current_voltage2)
         if keyboard.is_pressed('C'):
             current_voltage += 1
             current_voltage %= 2

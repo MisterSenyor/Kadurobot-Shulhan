@@ -122,7 +122,6 @@ class BallHandler:
             transform_matrix = cv2.getPerspectiveTransform(points_array, warped_plane)
             print("Perspective transformation matrix calculated.")
             return
-
         cv2.imshow("Yellow Ball Detection", frame)
 
     def detect_yellow_ball(self, func=None):

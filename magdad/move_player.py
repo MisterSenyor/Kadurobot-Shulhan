@@ -29,7 +29,7 @@ def main():
             direction = settings.RIGHT
         players_offset = moving_mms
         print("moving")
-        if abs(actual_moving_mms) < settings.MOVING_THRSHOLD:
+        if abs(actual_moving_mms) < settings.MOVING_THRESHOLD:
             continue
         # stepper_handler.move_centimeters(abs(actual_moving_mms) / 10, settings.VELOCITY, direction)
         #time.sleep(0.5)

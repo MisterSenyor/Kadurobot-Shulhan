@@ -145,7 +145,8 @@ class YellowBallDetector:
         Load HSV values from a JSON file if available.
         """
         try:
-            with open("hsv_values.json", "r") as file:
+            # TODO: make this work as a relative path
+            with open("C:\\Users\\TLP-001\\Desktop\\Code\\Kadurobot-Shulhan\\magdad\\hsv_values.json", "r") as file:
                 hsv_values = json.load(file)
                 self.lower_yellow = np.array(hsv_values["lower_yellow"], dtype=np.uint8)
                 self.upper_yellow = np.array(hsv_values["upper_yellow"], dtype=np.uint8)

@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import json
+from settings import *
 
 class YellowBallDetector:
     """
@@ -28,6 +29,7 @@ class YellowBallDetector:
         # List to store selected points for the quadrilateral
         self.selected_points = []
         self.quad_mask = None
+        self.transform_matrix = None
 
     def find_ball_location(self, frame):
         """
@@ -81,6 +83,7 @@ class YellowBallDetector:
 
             if len(self.selected_points) == 4:
                 self.create_quadrilateral_mask(param)
+                self.calculate_perspective_transform()
 
     def create_quadrilateral_mask(self, frame):
         """
@@ -97,6 +100,33 @@ class YellowBallDetector:
         cv2.addWeighted(overlay, 0.3, frame, 0.7, 0, frame)
 
         self.quad_mask = mask
+
+    def calculate_perspective_transform(self):
+        """
+        Calculates the perspective transformation matrix based on the selected points.
+        """
+        if len(self.selected_points) == 4:
+            # Define the points for the perspective transform (the 4 points selected)
+            quad_points = np.float32(self.selected_points)
+
+            # Define the destination points for the transformation (this should be a rectangle)
+            dst_points = np.float32([[0, 0], [BOARD_WIDTH_MM, 0], [BOARD_WIDTH_MM, BOARD_HEIGHT_MM], [0, BOARD_HEIGHT_MM]])
+
+            # Compute the perspective transform matrix
+            self.transform_matrix = cv2.getPerspectiveTransform(quad_points, dst_points)
+
+    def apply_perspective_transform(self, x, y):
+        """
+        Apply the perspective transform to the ball's (x, y) coordinates.
+        @param x: The x-coordinate of the ball.
+        @param y: The y-coordinate of the ball.
+        @return: Transformed (x, y) coordinates.
+        """
+        if self.transform_matrix is not None:
+            ball_point = np.float32([[x, y]])
+            transformed_point = cv2.perspectiveTransform(ball_point[None, :, :], self.transform_matrix)
+            return transformed_point[0][0]
+        return x, y
 
     def save_hsv_values(self):
         """
@@ -184,10 +214,15 @@ class YellowBallDetector:
             # Get ball location
             ball_x, ball_y, mask = self.find_ball_location(frame)
 
-            # Draw the ball on the frame if found
+            # Apply perspective transform to ball location
             if ball_x and ball_y:
-                cv2.circle(frame, (ball_x, ball_y), self.ball_radius, (0, 255, 0), 2)
-                cv2.putText(frame, f"Ball at ({ball_x}, {ball_y})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                transformed_x, transformed_y = self.apply_perspective_transform(ball_x, ball_y)
+                cv2.circle(frame, (int(ball_x), int(ball_y)), self.ball_radius, (0, 255, 0), 2)
+                cv2.putText(frame, f"Ball at ({int(transformed_x)}, {int(transformed_y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+            # Display selected points
+            for point in self.selected_points:
+                cv2.circle(frame, point, 5, (255, 0, 0), -1)
 
             # Display frames
             cv2.imshow("Original", frame)

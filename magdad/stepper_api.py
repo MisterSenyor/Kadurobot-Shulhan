@@ -1,6 +1,7 @@
 import time
 import keyboard
 import pyfirmata
+from stepper import Stepper
 from settings import RIGHT, LEFT, STEPS_PER_SECOND, CM_PER_STEPS, STEP_PIN, DIR_PIN
 
 

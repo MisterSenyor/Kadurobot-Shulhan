@@ -11,7 +11,7 @@ and got 19.5 mm movement for steps_per_second = 100
 STEPS_PER_SECOND = 8000
 CM_PER_STEPS = 1.95 / 100
 
-VELOCITY = 1000
+MAX_VELOCITY = 100000
 
 STEP_PIN = 5
 DIR_PIN = 3

@@ -62,7 +62,7 @@ class YellowBallDetector:
 
         return None, None, mask
 
-    def display_hsv_on_click(self, event, x, y, flags, param):
+    def on_click(self, event, x, y, flags, param):
         """
         Callback function to display HSV values of a clicked pixel.
         @param event: The mouse event.
@@ -154,18 +154,19 @@ class YellowBallDetector:
         except FileNotFoundError:
             print("No HSV values file found. Using default values.")
 
-    def run(self):
-        """
-        Runs the live video feed with ball detection.
-        """
-        cv2.namedWindow("Original", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("Processed", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("Mask", cv2.WINDOW_NORMAL)
+    def get_frame(self):
+        _, frame = self.cap.read()
+        return frame
+
+    def create_windows(self):
+        cv2.namedWindow("Ball-Original", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("Ball-Processed", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("Ball-Mask", cv2.WINDOW_NORMAL)
 
         # Enable aspect-ratio scaling for fullscreen
-        cv2.setWindowProperty("Original", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
-        cv2.setWindowProperty("Processed", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
-        cv2.setWindowProperty("Mask", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
+        cv2.setWindowProperty("Ball-Original", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
+        cv2.setWindowProperty("Ball-Processed", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
+        cv2.setWindowProperty("Ball-Mask", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
 
         # Create a trackbar for adjusting the ball radius
         def set_radius(val):
@@ -174,8 +175,8 @@ class YellowBallDetector:
         def set_min_radius(val):
             self.min_ball_radius = max(1, val)  # Ensure minimum radius is at least 1
 
-        cv2.createTrackbar("Ball Radius", "Processed", self.ball_radius, 100, set_radius)
-        cv2.createTrackbar("Min Radius", "Processed", self.min_ball_radius, 50, set_min_radius)
+        cv2.createTrackbar("Ball Radius", "Ball-Processed", self.ball_radius, 100, set_radius)
+        cv2.createTrackbar("Min Radius", "Ball-Processed", self.min_ball_radius, 50, set_min_radius)
 
         # Create trackbars for adjusting HSV values
         def update_lower_h(val):
@@ -196,13 +197,65 @@ class YellowBallDetector:
         def update_upper_v(val):
             self.upper_yellow[2] = val
 
-        cv2.createTrackbar("Lower H", "Processed", self.lower_yellow[0], 179, update_lower_h)
-        cv2.createTrackbar("Upper H", "Processed", self.upper_yellow[0], 179, update_upper_h)
-        cv2.createTrackbar("Lower S", "Processed", self.lower_yellow[1], 255, update_lower_s)
-        cv2.createTrackbar("Upper S", "Processed", self.upper_yellow[1], 255, update_upper_s)
-        cv2.createTrackbar("Lower V", "Processed", self.lower_yellow[2], 255, update_lower_v)
-        cv2.createTrackbar("Upper V", "Processed", self.upper_yellow[2], 255, update_upper_v)
+        cv2.createTrackbar("Lower H", "Ball-Processed", self.lower_yellow[0], 179, update_lower_h)
+        cv2.createTrackbar("Upper H", "Ball-Processed", self.upper_yellow[0], 179, update_upper_h)
+        cv2.createTrackbar("Lower S", "Ball-Processed", self.lower_yellow[1], 255, update_lower_s)
+        cv2.createTrackbar("Upper S", "Ball-Processed", self.upper_yellow[1], 255, update_upper_s)
+        cv2.createTrackbar("Lower V", "Ball-Processed", self.lower_yellow[2], 255, update_lower_v)
+        cv2.createTrackbar("Upper V", "Ball-Processed", self.upper_yellow[2], 255, update_upper_v)
 
+    def run_frame(self, frame):
+        """
+        Runs the live video feed with ball detection.
+        """
+        # Set mouse callback to display HSV values on click
+        cv2.setMouseCallback("Ball-Original", self.on_click, frame)
+
+        # Get ball location
+        ball_x, ball_y, mask = self.find_ball_location(frame)
+        transformed_x, transformed_y = None, None
+
+        # Apply perspective transform to ball location
+        if ball_x and ball_y:
+            transformed_x, transformed_y = self.apply_perspective_transform(ball_x, ball_y)
+            cv2.circle(frame, (int(ball_x), int(ball_y)), self.ball_radius, (0, 255, 0), 2)
+            cv2.putText(frame, f"Ball at ({int(transformed_x)}, {int(transformed_y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+        # Display selected points
+        for point in self.selected_points:
+            cv2.circle(frame, point, 5, (255, 0, 0), -1)
+
+        # Display frames
+        cv2.imshow("Ball-Original", frame)
+        cv2.imshow("Ball-Mask", mask)
+
+        # Highlight the detected area in the processed frame
+        processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
+        cv2.imshow("Ball-Processed", processed_frame)
+
+        key = cv2.waitKey(1) & 0xFF
+
+        if key == ord("q"):  # Quit if 'q' is pressed
+            return None
+        elif key == ord("s"):  # Save HSV values if 's' is pressed
+            self.save_hsv_values()
+        elif key == ord("f"):  # Fullscreen toggle for all windows
+            cv2.setWindowProperty("Ball-Original", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            cv2.setWindowProperty("Ball-Processed", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            cv2.setWindowProperty("Ball-Mask", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        
+        
+        return (transformed_x, transformed_y)
+
+    def exit(self):
+        self.cap.release()
+        cv2.destroyAllWindows()
+
+    def run(self):
+        """
+        Runs the live video feed with ball detection.
+        """
+        self.create_windows()
         while True:
             ret, frame = self.cap.read()
             if not ret:
@@ -210,7 +263,7 @@ class YellowBallDetector:
                 break
 
             # Set mouse callback to display HSV values on click
-            cv2.setMouseCallback("Original", self.display_hsv_on_click, frame)
+            cv2.setMouseCallback("Ball-Original", self.on_click, frame)
 
             # Get ball location
             ball_x, ball_y, mask = self.find_ball_location(frame)
@@ -226,12 +279,12 @@ class YellowBallDetector:
                 cv2.circle(frame, point, 5, (255, 0, 0), -1)
 
             # Display frames
-            cv2.imshow("Original", frame)
-            cv2.imshow("Mask", mask)
+            cv2.imshow("Ball-Original", frame)
+            cv2.imshow("Ball-Mask", mask)
 
             # Highlight the detected area in the processed frame
             processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
-            cv2.imshow("Processed", processed_frame)
+            cv2.imshow("Ball-Processed", processed_frame)
 
             key = cv2.waitKey(1) & 0xFF
 
@@ -240,14 +293,16 @@ class YellowBallDetector:
             elif key == ord("s"):  # Save HSV values if 's' is pressed
                 self.save_hsv_values()
             elif key == ord("f"):  # Fullscreen toggle for all windows
-                cv2.setWindowProperty("Original", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-                cv2.setWindowProperty("Processed", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-                cv2.setWindowProperty("Mask", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+                cv2.setWindowProperty("Ball-Original", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+                cv2.setWindowProperty("Ball-Processed", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+                cv2.setWindowProperty("Ball-Mask", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
         # Release resources
         self.cap.release()
         cv2.destroyAllWindows()
 
+
+
 if __name__ == "__main__":
-    detector = YellowBallDetector(camera_index=1, initial_ball_radius=20)
+    detector = YellowBallDetector(camera_index=0, initial_ball_radius=20)
     detector.run()

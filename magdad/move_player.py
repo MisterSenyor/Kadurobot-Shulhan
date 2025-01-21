@@ -1,24 +1,26 @@
 import time
 
-import cv
+import cv_v2
 import settings
 import stepper_api
 
 
 def main():
     print("starting loop")
-    ball_handler = cv.BallHandler(settings.BOARD_WIDTH_MM, settings.BOARD_HEIGHT_MM)
-    # for _ in range(4):
-    #     ball_handler.choose_points()
+    ball_handler = cv_v2.YellowBallDetector()
     print("ball handler created")
-    # stepper_handler = stepper_api.StepperHandler(settings.PORT)
+    stepper_handler = stepper_api.StepperHandler(settings.PORT)
     players_offset = 0
     third = settings.BOARD_HEIGHT_MM // 3
+    ball_handler.create_windows()
     while True:
         print("detecting")
-        coordinates = ball_handler.detect_yellow_ball()
+        frame = ball_handler.get_frame()
+        coordinates = ball_handler.run_frame(frame)
         print(f"{coordinates=}")
-        if coordinates is None or coordinates[1] is None:
+        if coordinates is None:
+            quit()
+        elif coordinates[1] is None:
             continue
         moving_mms = coordinates[1] % third
         #moving_mms = coordinates[1]
@@ -31,8 +33,8 @@ def main():
         print("moving")
         if abs(actual_moving_mms) < settings.MOVING_THRESHOLD:
             continue
-        # stepper_handler.move_centimeters(abs(actual_moving_mms) / 10, settings.VELOCITY, direction)
-        #time.sleep(0.5)
+        stepper_handler.move_centimeters(abs(actual_moving_mms) / 10, settings.VELOCITY, direction)
+        time.sleep(0.5)
 
 
 if __name__ == "__main__":

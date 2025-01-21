@@ -1,245 +1,260 @@
 import cv2
 import numpy as np
-from collections import deque
+import json
 
-class LineAndBlobDetector:
-    def __init__(self, thickness=5, color_range=((0, 50, 50), (10, 255, 255)), max_window_size=5):
+class YellowBallDetector:
+    """
+    Class for detecting shapes intersecting with lines in a live video feed.
+    """
+
+    def __init__(self, camera_index=0, initial_group_threshold=20):
         """
-        Initialize the detector.
-
-        :param thickness: Expected thickness of the lines to detect.
-        :param color_range: HSV range for blob detection (default is for red blobs).
-        :param max_window_size: Size of the sliding window for stability.
+        Initialize the YellowBallDetector.
+        @param camera_index: Index of the camera (default is 0 for the primary camera).
+        @param initial_ball_radius: Initial radius of the ball in pixels.
         """
-        self.thickness = thickness
-        self.color_range = color_range
-        self.cap = cv2.VideoCapture(0)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        self.sliding_window = deque(maxlen=max_window_size)
+        self.camera_index = camera_index
+        self.group_threshold = initial_group_threshold
+        self.min_area = 5
+        self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use CAP_DSHOW for faster loading on Windows
 
-        # Load the template blob shape
-        self.template_blob = cv2.imread("C:\\Users\\TLP-001\\Desktop\\Code\\Kadurobot-Shulhan\\magdad\\template_blob.png", cv2.IMREAD_GRAYSCALE)
-        if self.template_blob is None:
-            raise FileNotFoundError("Template blob image not found. Ensure 'template_blob.png' is in the working directory.")
+        # HSV range for blue color
+        self.lower_blue = np.array([43, 150, 255])  # Default lower bound
+        self.upper_blue = np.array([54, 245, 255])  # Default upper bound
 
-    def preprocess_frame(self, frame):
+        # Lines defined by middle mouse clicks
+        self.lines = []
+
+        # Load preset values if available
+        self.load_hsv_values()
+
+    def find_shapes_on_lines(self, frame):
         """
-        Convert the frame to grayscale and blur it.
-        :param frame: Input frame.
-        :return: Preprocessed frame.
+        Detect and process shapes that intersect with user-defined lines.
+        Groups nearby contours into single bounding boxes if within a defined distance and ensures
+        only rectangles that intersect with marked lines are displayed.
+        @param frame: Current frame from the video feed.
+        @param grouping_distance: Maximum distance between contours to be grouped together.
         """
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        return blurred
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv_frame, self.lower_blue, self.upper_blue)
 
-    def detect_lines(self, frame):
-        """
-        Detect long, straight lines in the frame.
-        :param frame: Input frame.
-        :return: List of merged lines.
-        """
-        edges = cv2.Canny(frame, 50, 150, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=100, maxLineGap=10)
+        # Find contours in the mask
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        if lines is None:
-            return []
-
-        # Merge lines that appear to be extensions of each other
-        merged_lines = []
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            new_line = True
-            for i, (mx1, my1, mx2, my2) in enumerate(merged_lines):
-                if self.are_lines_collinear((x1, y1, x2, y2), (mx1, my1, mx2, my2)):
-                    merged_lines[i] = self.merge_lines((x1, y1, x2, y2), (mx1, my1, mx2, my2))
-                    new_line = False
-                    break
-            if new_line:
-                merged_lines.append((x1, y1, x2, y2))
-
-        # Group parallel lines as cylindrical shapes
-        cylinders = self.group_parallel_lines(merged_lines)
-
-        return cylinders
-
-    def group_parallel_lines(self, lines, proximity_threshold=20, angle_threshold=10):
-        """
-        Group parallel lines into cylindrical shapes.
-        :param lines: List of lines as (x1, y1, x2, y2).
-        :param proximity_threshold: Distance between lines to group them.
-        :param angle_threshold: Angle difference to consider lines parallel.
-        :return: List of grouped lines as cylinders.
-        """
-        cylinders = []
-        used = [False] * len(lines)
-
-        for i, line1 in enumerate(lines):
-            if used[i]:
+        # Group contours based on proximity
+        bounding_boxes = []
+        for contour in contours:
+            if cv2.contourArea(contour) < 50:  # Ignore small contours
                 continue
 
-            group = [line1]
-            x1, y1, x2, y2 = line1
-            angle1 = np.arctan2(y2 - y1, x2 - x1)
+            # Get bounding box for the current contour
+            x, y, w, h = cv2.boundingRect(contour)
+            box = (x, y, x + w, y + h)
 
-            for j, line2 in enumerate(lines):
-                if i == j or used[j]:
+            # Check if this box can be merged with existing groups
+            merged = False
+            for i, group in enumerate(bounding_boxes):
+                gx1, gy1, gx2, gy2 = group
+                if abs(x - gx2) <= self.group_threshold and abs(y - gy2) <= self.group_threshold:
+                    # Merge boxes
+                    bounding_boxes[i] = (
+                        min(gx1, x), min(gy1, y),
+                        max(gx2, x + w), max(gy2, y + h)
+                    )
+                    merged = True
+                    break
+
+            if not merged:
+                bounding_boxes.append(box)
+
+        # Filter bounding boxes that intersect with any marked line
+        valid_boxes = []
+        for box in bounding_boxes:
+            x1, y1, x2, y2 = box
+            for line in self.lines:
+                if len(line) < 4:
                     continue
+                lx1, ly1, lx2, ly2 = line
+                if self.rect_intersects_line(x1, y1, x2, y2, lx1, ly1, lx2, ly2):
+                    valid_boxes.append(box)
+                    break
 
-                x3, y3, x4, y4 = line2
-                angle2 = np.arctan2(y4 - y3, x4 - x3)
-                angle_diff = np.abs(np.degrees(angle1 - angle2))
+        # Draw lines and valid bounding boxes
+        for line in self.lines:
+            if len(line) < 4:
+                continue
+            x1, y1, x2, y2 = line
+            cv2.line(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Draw the line
 
-                if angle_diff < angle_threshold:
-                    distance = np.abs(y3 - y1) if np.abs(x1 - x2) < np.abs(y1 - y2) else np.abs(x3 - x1)
-                    if distance < proximity_threshold:
-                        group.append(line2)
-                        used[j] = True
+        for contour in contours:
+            cv2.drawContours(frame, [contour], -1, (0, 255, 0), 2)  # Draw individual contours
 
-            cylinders.append(group)
+        for box in valid_boxes:
+            x1, y1, x2, y2 = box
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Draw valid bounding boxes
 
-        return cylinders
+        return mask
 
-    @staticmethod
-    def are_lines_collinear(line1, line2, angle_threshold=10, distance_threshold=20):
+    def rect_intersects_line(self, x1, y1, x2, y2, lx1, ly1, lx2, ly2):
         """
-        Check if two lines are collinear.
-        :param line1: First line as (x1, y1, x2, y2).
-        :param line2: Second line as (x1, y1, x2, y2).
-        :param angle_threshold: Angle threshold in degrees.
-        :param distance_threshold: Distance threshold in pixels.
-        :return: True if lines are collinear, False otherwise.
+        Check if a rectangle intersects with a line.
+        @param x1, y1, x2, y2: Rectangle coordinates (top-left and bottom-right).
+        @param lx1, ly1, lx2, ly2: Line start and end coordinates.
+        @return: True if the rectangle intersects with the line, False otherwise.
         """
-        x1, y1, x2, y2 = line1
-        x3, y3, x4, y4 = line2
+        rect_lines = [
+            ((x1, y1), (x2, y1)),  # Top edge
+            ((x2, y1), (x2, y2)),  # Right edge
+            ((x2, y2), (x1, y2)),  # Bottom edge
+            ((x1, y2), (x1, y1)),  # Left edge
+        ]
 
-        angle1 = np.arctan2(y2 - y1, x2 - x1)
-        angle2 = np.arctan2(y4 - y3, x4 - x3)
-
-        angle_diff = np.abs(np.degrees(angle1 - angle2))
-        if angle_diff > angle_threshold:
-            return False
-
-        # Check if endpoints are close
-        if np.linalg.norm([x1 - x3, y1 - y3]) < distance_threshold or \
-           np.linalg.norm([x2 - x4, y2 - y4]) < distance_threshold:
-            return True
-
+        for rect_line in rect_lines:
+            if self.line_intersects(lx1, ly1, lx2, ly2, *rect_line[0], *rect_line[1]):
+                return True
         return False
 
+    def line_intersects(self, x1, y1, x2, y2, x3, y3, x4, y4):
+        """
+        Check if two line segments intersect.
+        Uses the cross product method to detect intersection.
+        @param x1, y1, x2, y2: Endpoints of the first line.
+        @param x3, y3, x4, y4: Endpoints of the second line.
+        @return: True if the lines intersect, False otherwise.
+        """
+        def ccw(a, b, c):
+            return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
+
+        p1, p2 = (x1, y1), (x2, y2)
+        p3, p4 = (x3, y3), (x4, y4)
+        return ccw(p1, p3, p4) != ccw(p2, p3, p4) and ccw(p1, p2, p3) != ccw(p1, p2, p4)
+
+
     @staticmethod
-    def merge_lines(line1, line2):
+    def is_point_on_line(point, line, tolerance=5):
         """
-        Merge two collinear lines into one.
-        :param line1: First line as (x1, y1, x2, y2).
-        :param line2: Second line as (x1, y1, x2, y2).
-        :return: Merged line.
+        Check if a point lies on a line segment within a tolerance.
+        @param point: Tuple (x, y) of the point to check.
+        @param line: Tuple (x1, y1, x2, y2) of the line segment.
+        @param tolerance: Distance tolerance for considering a point on the line.
+        @return: True if the point is on the line, False otherwise.
         """
-        points = np.array([[line1[0], line1[1]], [line1[2], line1[3]],
-                           [line2[0], line2[1]], [line2[2], line2[3]]])
-        x_coords, y_coords = points[:, 0], points[:, 1]
-        return min(x_coords), min(y_coords), max(x_coords), max(y_coords)
+        x, y = point
+        x1, y1, x2, y2 = line
+        if x1 == x2:  # Vertical line
+            return abs(x - x1) <= tolerance and min(y1, y2) <= y <= max(y1, y2)
+        elif y1 == y2:  # Horizontal line
+            return abs(y - y1) <= tolerance and min(x1, x2) <= x <= max(x1, x2)
+        else:
+            # Line equation: (y - y1) = m * (x - x1)
+            m = (y2 - y1) / (x2 - x1)
+            return abs(y - y1 - m * (x - x1)) <= tolerance
 
-    def detect_blobs(self, frame):
+    def display_hsv_on_click(self, event, x, y, flags, param):
         """
-        Detect blobs of a specific shape in the frame.
-        :param frame: Input frame.
-        :return: List of contours matching the template shape.
+        Callback function to display HSV values and set lines on mouse click.
+        @param event: The mouse event.
+        @param x: X-coordinate of the click.
+        @param y: Y-coordinate of the click.
+        @param flags: Any relevant flags passed by OpenCV.
+        @param param: Additional parameters (frame).
         """
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        _, thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)
+        if event == cv2.EVENT_MBUTTONDOWN:
+            if len(self.lines) > 0 and len(self.lines[-1]) < 4:
+                self.lines[-1].extend([x, y])  # Complete the line
+            else:
+                self.lines.append([x, y])  # Start a new line
+            print(f"Line defined: {self.lines[-1]}")
 
-        # Find contours
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        matches = []
-
-        # Match each contour to the template blob shape
-        for contour in contours:
-            resized_template = cv2.resize(self.template_blob, (50, 50))
-            result = cv2.matchShapes(resized_template, contour, cv2.CONTOURS_MATCH_I1, 0.0)
-            if result < 0.3:  # Lower values indicate a better match
-                matches.append(contour)
-
-        return matches
-
-    def process_frame(self):
+    def load_hsv_values(self):
         """
-        Process a single frame from the camera feed.
-        :return: Processed frame with lines and blobs marked.
+        Load HSV values from a JSON file if available.
         """
-        ret, frame = self.cap.read()
-        if not ret:
-            return None
-
-        preprocessed = self.preprocess_frame(frame)
-        cylinders = self.detect_lines(preprocessed)
-        blobs = self.detect_blobs(frame)
-
-        # Draw lines
-        for group in cylinders:
-            for x1, y1, x2, y2 in group:
-                cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-        # Draw blobs
-        for contour in blobs:
-            cv2.drawContours(frame, [contour], -1, (0, 0, 255), 2)
-
-        # Add to sliding window for stability
-        self.sliding_window.append((cylinders, blobs))
-
-        # Average results from sliding window
-        avg_lines = self.average_lines()
-        avg_blobs = self.average_blobs()
-
-        # Draw stabilized lines and blobs
-        for group in avg_lines:
-            for x1, y1, x2, y2 in group:
-                cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
-
-        for contour in avg_blobs:
-            cv2.drawContours(frame, [contour], -1, (255, 255, 0), 2)
-
-        # Show edge detection window
-        edges = cv2.Canny(preprocessed, 50, 150, apertureSize=3)
-        cv2.imshow("Edges", edges)
-
-        return frame
-
-    def average_lines(self):
-        """
-        Average lines over the sliding window.
-        :return: List of averaged lines.
-        """
-        all_lines = [group for window in self.sliding_window for group in window[0]]
-        return all_lines  # Placeholder: Implement actual averaging logic
-
-    def average_blobs(self):
-        """
-        Average blobs over the sliding window.
-        :return: List of averaged blobs.
-        """
-        all_blobs = [blob for window in self.sliding_window for blob in window[1]]
-        return all_blobs  # Placeholder: Implement actual averaging logic
+        try:
+            with open("hsv_values.json", "r") as file:
+                hsv_values = json.load(file)
+                self.lower_blue = np.array(hsv_values["lower_blue"], dtype=np.uint8)
+                self.upper_blue = np.array(hsv_values["upper_blue"], dtype=np.uint8)
+                print("Loaded HSV values from hsv_values.json")
+        except FileNotFoundError:
+            print("No HSV values file found. Using default values.")
 
     def run(self):
         """
-        Start the real-time detection.
+        Runs the live video feed with detection.
         """
+        cv2.namedWindow("Original", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("Processed", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("Mask", cv2.WINDOW_NORMAL)
+
+        # Enable aspect-ratio scaling for fullscreen
+        cv2.setWindowProperty("Original", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
+        cv2.setWindowProperty("Processed", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
+        cv2.setWindowProperty("Mask", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
+
+        # Create a trackbar for adjusting the ball radius
+        def set_radius(val):
+            self.group_threshold = max(self.min_area, val)  # Ensure radius is at least min_ball_radius
+
+        def set_min_radius(val):
+            self.min_area = max(1, val)  # Ensure minimum radius is at least 1
+
+        cv2.createTrackbar("Ball Radius", "Processed", self.group_threshold, 100, set_radius)
+        cv2.createTrackbar("Min Radius", "Processed", self.min_area, 50, set_min_radius)
+
+        # Create trackbars for adjusting HSV values
+        def update_lower_h(val):
+            self.lower_blue[0] = val
+
+        def update_upper_h(val):
+            self.upper_blue[0] = val
+
+        def update_lower_s(val):
+            self.lower_blue[1] = val
+
+        def update_upper_s(val):
+            self.upper_blue[1] = val
+
+        def update_lower_v(val):
+            self.lower_blue[2] = val
+
+        def update_upper_v(val):
+            self.upper_blue[2] = val
+
+        cv2.createTrackbar("Lower H", "Processed", self.lower_blue[0], 179, update_lower_h)
+        cv2.createTrackbar("Upper H", "Processed", self.upper_blue[0], 179, update_upper_h)
+        cv2.createTrackbar("Lower S", "Processed", self.lower_blue[1], 255, update_lower_s)
+        cv2.createTrackbar("Upper S", "Processed", self.upper_blue[1], 255, update_upper_s)
+        cv2.createTrackbar("Lower V", "Processed", self.lower_blue[2], 255, update_lower_v)
+        cv2.createTrackbar("Upper V", "Processed", self.upper_blue[2], 255, update_upper_v)
+
         while True:
-            frame = self.process_frame()
-            if frame is None:
+            ret, frame = self.cap.read()
+            if not ret:
+                print("Failed to capture frame. Exiting.")
                 break
 
-            cv2.imshow("Line and Blob Detection", frame)
+            # Set mouse callback for line definition
+            cv2.setMouseCallback("Original", self.display_hsv_on_click, frame)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            # Detect shapes intersecting lines
+            mask = self.find_shapes_on_lines(frame)
+
+            # Display frames
+            cv2.imshow("Original", frame)
+            cv2.imshow("Mask", mask)
+            # Highlight the detected area in the processed frame
+            processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
+            cv2.imshow("Processed", processed_frame)
+
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("q"):  # Quit
                 break
 
         self.cap.release()
         cv2.destroyAllWindows()
 
-# Example usage:
 if __name__ == "__main__":
-    detector = LineAndBlobDetector()
+    detector = YellowBallDetector(camera_index=1, initial_group_threshold=20)
     detector.run()

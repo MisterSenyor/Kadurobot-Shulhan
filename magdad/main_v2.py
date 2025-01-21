@@ -5,6 +5,7 @@ import pyfirmata
 # import cv
 from settings import RIGHT, LEFT, STEPS_PER_SECOND, CM_PER_STEPS, MAX_VELOCITY
 import cv
+
 PORT = "COM13"
 
 
@@ -13,17 +14,21 @@ def main2():
     while True:
         print(ball_handler.detect_yellow_ball())
 
+
 def controller(ball_pos):
     print("CONTROLLING:")
     print(f"{ball_pos=}")
 
+
 def game_main():
     cv.detect_yellow_ball_real_time(controller)
+
 
 def main():
     # set up arduino board
     board = pyfirmata.Arduino(PORT)
     current_voltage = 0
+    current_voltage2 = 0
 
     # start while loop to keep blinking indefinitely
     while True:
@@ -44,14 +49,14 @@ def main():
         if keyboard.is_pressed('left'):
             board.digital[2].write(1)
             current_voltage2 = 1
-        #print("hi")ggV
+        # print("hi")
         while keyboard.is_pressed('space'):
-            print("PRESSED")
+            sps = 90000
             board.digital[5].write(1)  # turn pin 1
             # 3 ON
-            time.sleep(1 / STEPS_PER_SECOND)  # wait 1/2 second
+            time.sleep(1 / sps)  # wait 1/2 second
             board.digital[5].write(0)  # turn pin 13 OFF
-            time.sleep(1 / STEPS_PER_SECOND)  # wait 1/2 second
+            time.sleep(1 / sps)  # wait 1/2 second
         while keyboard.is_pressed('tab'):
             board.digital[6].write(1)  # turn pin 1
             # 3 ON
@@ -70,7 +75,17 @@ def main():
             current_voltage += 1
             current_voltage %= 2
         if keyboard.is_pressed('M'):
-            move_centimeters(10, board, 5, 3, STEPS_PER_SECOND, LEFT)
+            #move_centimeters(300, board, 5, 3, STEPS_PER_SECOND, LEFT)
+            move_centimeters(100, board, 5, 3, 1000, LEFT)
+
+
+def step_with_vprofile(board, steps, step_pin, dir_pin, velocity, direction, current_volt):
+    acceleration = 100
+    curr_vel = 10
+    for i in range(0, steps, acceleration):
+        current_volt = step(board, step_pin, dir_pin, curr_vel, direction, current_volt)
+        if curr_vel < min(MAX_VELOCITY, velocity):
+            curr_vel += acceleration
 
 
 def step(board, step_pin, dir_pin, velocity, direction, current_volt):
@@ -82,9 +97,9 @@ def step(board, step_pin, dir_pin, velocity, direction, current_volt):
 
 def move_centimeters(centimeters, board, step_pin, dir_pin, velocity, direction):
     current_voltage = 0
-    for _ in range(round(centimeters / CM_PER_STEPS)):
-        current_voltage = step(board, step_pin, dir_pin, velocity, direction, current_voltage)
-
+    num_steps = round(centimeters / CM_PER_STEPS)
+    step_with_vprofile(board, num_steps, step_pin, dir_pin, velocity, direction,
+                       current_voltage)
 
 
 if __name__ == "__main__":

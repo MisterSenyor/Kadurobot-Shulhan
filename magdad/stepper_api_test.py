@@ -14,7 +14,7 @@ class StepperHandler():
 
     def move_to_mm(self, mm):
         print(f"MOVING TO {mm}-----------------")
-        self.arduino.write(f"{round(mm / MM_PER_STEPS)}\n".encode())
+        self.arduino.write(f"s\n{round(mm / MM_PER_STEPS)}\n".encode())
    
     def move_mm(self, mm, direction):
         print(f"MOVING {mm} IN {direction} -----------------")

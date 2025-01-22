@@ -21,12 +21,14 @@ while True:
         elif keyboard.is_pressed("down"):
             arduino.write(b"DOWN\n")
         elif keyboard.is_pressed("z"):
-            arduino.write(b"100\n")  # Send the "step" command
+            # arduino.write(b"s\n100\n")  # Send the "step" command
+            arduino.write(b"s\n1000\n")  # Send the "step" command
         elif keyboard.is_pressed("x"):
-            arduino.write(b"0\n")  # Send the "step" command
+            # arduino.write(b"s\n0\n")  # Send the "step" command
+            arduino.write(b"s\n0\n")  # Send the "step" command
         elif keyboard.is_pressed("q"):
             quit()
-        time.sleep(0.001)  # Adjust delay if needed
+        time.sleep(0.5)  # Adjust delay if needed
     except KeyboardInterrupt:
         print("Stopping...")
         

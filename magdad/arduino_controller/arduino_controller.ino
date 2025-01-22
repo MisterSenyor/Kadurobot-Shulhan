@@ -34,6 +34,8 @@ void loop() {
       Serial.println("Direction set to DOWN");
     } 
     else {
+      String command = Serial.readStringUntil('\n'); // Read number after s command
+      // if (command.charAt(0) == 's') { command = command.substring(1); }
       int target = command.toInt(); // Convert the command to an integer
 
       if (target != stepCounter) {
@@ -50,13 +52,16 @@ void loop() {
         Serial.print("Running ");
         Serial.print(stepsToRun);
         Serial.println(" steps. Send 's' to stop.");
-
+        while (Serial.available() > 0) {
+          Serial.read(); // Read and discard characters
+        }
         for (int i = 0; i < stepsToRun; i++) {
           
           if (Serial.available() > 0) {
             char stopChar = Serial.read(); // Read the character
             if (stopChar == 's') {
               Serial.println("Stopping steps...");
+              char stopChar = Serial.read(); // empty newline from queue
               break; // Exit the loop
             }
           }

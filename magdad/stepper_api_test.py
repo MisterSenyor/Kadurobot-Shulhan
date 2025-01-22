@@ -1,3 +1,4 @@
+import keyboard
 import serial
 import time
 from settings import *
@@ -21,3 +22,22 @@ class StepperHandler():
     
     def quit(self): 
         self.arduino.close()
+    
+    def move_100_steps(self):
+        self.arduino.write(DIR_UP.encode())
+        time.sleep(0.1)
+        self.arduino.write(b"500\n")
+        time.sleep(0.1)
+        # self.arduino.write(DIR_UP.encode())
+        # time.sleep(0.1)
+        # self.arduino.write(b"100\n")
+    
+    def move_50_steps(self):
+        self.arduino.write(DIR_UP.encode())
+        while not keyboard.is_pressed("q"):
+            time.sleep(1)
+            self.arduino.write(b"10\n")
+
+if __name__ == "__main__":
+    handler = StepperHandler(PORT)
+    handler.move_100_steps()

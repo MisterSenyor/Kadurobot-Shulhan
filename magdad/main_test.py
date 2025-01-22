@@ -22,7 +22,9 @@ while True:
             arduino.write(b"DOWN\n")
         elif keyboard.is_pressed("z"):
             arduino.write(b"10\n")  # Send the "step" command
-        time.sleep(0.01)  # Adjust delay if needed
+        elif keyboard.is_pressed("q"):
+            quit()
+        time.sleep(0.001)  # Adjust delay if needed
     except KeyboardInterrupt:
         print("Stopping...")
         

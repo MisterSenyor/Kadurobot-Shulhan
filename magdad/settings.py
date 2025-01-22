@@ -1,5 +1,6 @@
 BOARD_WIDTH_MM = 590
 BOARD_HEIGHT_MM = 340
+HEIGHT_PADDING_MM = 25 # 25 including both directions
 """
 Ran the following code:
 for _ in range(100):
@@ -8,7 +9,7 @@ and got 19.5 mm movement for steps_per_second = 100
 """
 STEPS_PER_SECOND = 10
 CM_PER_STEPS = 1.95 / 100
-MM_PER_STEPS = 43 / 100
+MM_PER_STEPS = 108 / 500
 
 MAX_VELOCITY = 100000
 VELOCITY = 8000
@@ -22,4 +23,4 @@ PORT = "COM13"
 DIR_UP = "UP\n"
 DIR_DOWN = "DOWN\n"
 
-MOVING_THRESHOLD = 15
+MOVING_THRESHOLD = 8

@@ -305,7 +305,7 @@ class YellowBallDetector:
             if ball_x and ball_y:
                 transformed_x, transformed_y = self.apply_perspective_transform(ball_x, ball_y)
                 cv2.circle(frame, (int(ball_x), int(ball_y)), self.ball_radius, (0, 255, 0), 2)
-                cv2.putText(frame, f"Ball at ({int(transformed_x)}, {int(transformed_y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+#  )               cv2.puttext(frame, f"ball at ({int(transformed_x)}, {int(transformed_y)})", (10, 30), cv2.font_hershey_simplex, 1, (0, 255, 0), 2)
 
             # Display selected points
             for point in self.selected_points:
@@ -337,5 +337,5 @@ class YellowBallDetector:
 
 
 if __name__ == "__main__":
-    detector = YellowBallDetector(camera_index=0, initial_ball_radius=20)
+    detector = YellowBallDetector(camera_index=1, initial_ball_radius=20)
     detector.run()

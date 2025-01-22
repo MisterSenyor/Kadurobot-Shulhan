@@ -20,11 +20,22 @@ void step() {
 
 void loop() {
   if (Serial.available() > 0) {
-    // String command = Serial.readStringUntil('\n'); // Read command
-    int steps = Serial.parseInt(); // Read the number
-    Serial.print("Hello World! \n");
-    for (int i = 0; i < steps; i++) {
-        step();
+    String command = Serial.readStringUntil('\n'); // Read command
+    // int steps = Serial.parseInt(); // Read the number
+    if (command.equals("UP")) {
+      digitalWrite(dirPin, LOW); // Set initial direction
     }
+    else if (command.equals("DOWN")) {
+      digitalWrite(dirPin, HIGH); // Set initial direction
+    }
+    else {
+      int steps = command.toInt();
+      for (int i = 0; i < steps; i++) {
+          step();
+      }
+    }
+
+    Serial.print("Hello World! \n");
+
   }
 }

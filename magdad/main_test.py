@@ -1,5 +1,6 @@
 import serial
 import time
+import keyboard
 
 # Define the serial port and baud rate (ensure these match your Arduino sketch)
 serial_port = "COM13"  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
@@ -11,15 +12,18 @@ time.sleep(2)  # Wait for the connection to establish
 
 print("Starting stepper motor control...")
 
-try:
-    # Command the Arduino to step the motor
-    print("STARTING -----------------")
-    time.sleep(5)
-    arduino.write(b"100\n")  # Send the "step" command
-    while True:
-        pass
-    # time.sleep(0.01)  # Adjust delay if needed
-except KeyboardInterrupt:
-    print("Stopping...")
-finally:
-    arduino.close()
+while True:
+    try:
+        # Command the Arduino to step the motor
+        print("STARTING -----------------")
+        if keyboard.is_pressed("up"):
+            arduino.write(b"UP\n")
+        elif keyboard.is_pressed("down"):
+            arduino.write(b"DOWN\n")
+        elif keyboard.is_pressed("z"):
+            arduino.write(b"10\n")  # Send the "step" command
+        time.sleep(0.01)  # Adjust delay if needed
+    except KeyboardInterrupt:
+        print("Stopping...")
+        
+arduino.close()

@@ -6,7 +6,7 @@ from settings import RIGHT, LEFT, STEPS_PER_SECOND, CM_PER_STEPS, MAX_VELOCITY
 
 
 class StepperHandler:
-    def __init__(self, dir_pin, step_pin, port="COM8"):
+    def __init__(self, dir_pin, step_pin, port="com8"):
         self.board = self.define_board(port)
         self._current_voltage = 0
         self.velocity = STEPS_PER_SECOND

@@ -8,7 +8,7 @@ class YellowBallDetector:
     Class for detecting a yellow ball in a live video feed.
     """
 
-    def __init__(self, camera_index=0, initial_ball_radius=20):
+    def __init__(self, camera_index=1, initial_ball_radius=20):
         """
         Initialize the YellowBallDetector.
         @param camera_index: Index of the camera (default is 0 for the primary camera).
@@ -126,7 +126,37 @@ class YellowBallDetector:
             ball_point = np.float32([[x, y]])
             transformed_point = cv2.perspectiveTransform(ball_point[None, :, :], self.transform_matrix)
             return transformed_point[0][0]
-        return x, y
+        return None, None
+    
+    def plane_length_to_pixels(self, length):
+        """
+        Convert a length on the transformed plane to pixel length in the original image.
+
+        @param length: The length on the transformed plane.
+        @param perspective_matrix: The 3x3 perspective transform matrix.
+        @return: Equivalent length in pixels.
+        """
+        if self.transform_matrix is None:
+            return None
+        # Define two points separated by the given length on the transformed plane
+        point1 = np.array([[0, 0]], dtype=np.float32)  # Starting point
+        point2 = np.array([[length, 0]], dtype=np.float32)  # Point at the given length
+
+        # Convert points to homogeneous coordinates
+        points_plane = np.array([point1, point2]).reshape(-1, 1, 2)
+
+        # Apply the reverse perspective transform
+        points_image = cv2.perspectiveTransform(points_plane, np.linalg.inv(self.transform_matrix))
+
+        # Extract the pixel coordinates from the transformed points
+        pixel_point1 = points_image[0, 0]
+        pixel_point2 = points_image[1, 0]
+
+        # Calculate the Euclidean distance between the points in pixels
+        pixel_length = np.sqrt((pixel_point2[0] - pixel_point1[0]) ** 2 + (pixel_point2[1] - pixel_point1[1]) ** 2)
+
+        return pixel_length
+ 
 
     def save_hsv_values(self):
         """
@@ -219,7 +249,10 @@ class YellowBallDetector:
         if ball_x and ball_y:
             transformed_x, transformed_y = self.apply_perspective_transform(ball_x, ball_y)
             cv2.circle(frame, (int(ball_x), int(ball_y)), self.ball_radius, (0, 255, 0), 2)
-            cv2.putText(frame, f"Ball at ({int(transformed_x)}, {int(transformed_y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            if transformed_x is None:
+                cv2.putText(frame, f"Ball at ({int(ball_x)}, {int(ball_y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            else:
+                cv2.putText(frame, f"TBall at ({int(transformed_x)}, {int(transformed_y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         # Display selected points
         for point in self.selected_points:

@@ -12,6 +12,10 @@ class StepperHandler():
         time.sleep(2)  # Wait for the connection to establish
         self.arduino.write(self.direction.encode())
 
+    def move_to_mm(self, mm):
+        print(f"MOVING TO {mm}-----------------")
+        self.arduino.write(f"{round(mm / MM_PER_STEPS)}\n".encode())
+   
     def move_mm(self, mm, direction):
         print(f"MOVING {mm} IN {direction} -----------------")
         if direction != self.direction:

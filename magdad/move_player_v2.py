@@ -13,7 +13,6 @@ mouse_coordinates = [100, 100]
 def run(ball_handler, linear_stepper_handler):
     players_offset = 0
     while True:
-        print("detecting")
         frame = ball_handler.get_frame()
         coordinates = ball_handler.run_frame(frame)
         print(f"{coordinates=}")
@@ -41,17 +40,17 @@ def handle_ball_location(linear_stepper_handler: stepper_api_test.StepperHandler
         return players_offset
     print("moving")
     players_offset = moving_mms
-    linear_stepper_handler.move_mm(abs(actual_moving_mms), direction)
+    linear_stepper_handler.move_to_mm(players_offset)
     return players_offset
     
 
 def calibration_test(ball_handler: cv_v2.YellowBallDetector, linear_stepper_handler: stepper_api_test.StepperHandler, dist):
-    linear_stepper_handler.move_mm(dist, settings.DIR_UP)
+    linear_stepper_handler.move_to_mm(dist, settings.DIR_UP)
 
 def move_to_fractions_test(ball_handler, linear_stepper_handler: stepper_api_test.StepperHandler, divisor):
     jumps_mm = round((settings.BOARD_HEIGHT_MM - settings.HEIGHT_PADDING_MM) / divisor)
     for _ in range(divisor):
-        linear_stepper_handler.move_mm(jumps_mm, settings.DIR_UP)
+        linear_stepper_handler.move_to_mm(jumps_mm, settings.DIR_UP)
 
 def move_to_mouse_test(ball_handler: cv_v2.YellowBallDetector, linear_stepper_handler: stepper_api_test.StepperHandler):
     global mouse_coordinates
@@ -90,8 +89,8 @@ def main():
         time.sleep(0.05)
     
     # calibration_test(ball_handler, linear_stepper_handler, 50)
-    # move_to_mouse_test(ball_handler, linear_stepper_handler)
-    run(ball_handler, linear_stepper_handler)
+    move_to_mouse_test(ball_handler, linear_stepper_handler)
+    # run(ball_handler, linear_stepper_handler)
 
 
 if __name__ == "__main__":

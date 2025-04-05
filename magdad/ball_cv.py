@@ -3,7 +3,7 @@ import numpy as np
 import json
 from settings import *
 
-class YellowBallDetector:
+class BallDetector:
     """
     Class for detecting a yellow ball in a live video feed.
     """
@@ -166,9 +166,9 @@ class YellowBallDetector:
             "lower_yellow": self.lower_yellow.tolist(),
             "upper_yellow": self.upper_yellow.tolist()
         }
-        with open("hsv_values.json", "w") as file:
+        with open("ball_cv_parameters.json", "w") as file:
             json.dump(hsv_values, file)
-        print("HSV values saved to hsv_values.json")
+        print("HSV values saved to ball_cv_parameters.json")
 
     def load_hsv_values(self):
         """
@@ -176,11 +176,11 @@ class YellowBallDetector:
         """
         try:
             # TODO: make this work as a relative path
-            with open("C:\\Users\\TLP-001\\Desktop\\Code\\Kadurobot-Shulhan\\magdad\\hsv_values.json", "r") as file:
+            with open("C:\\Users\\TLP-001\\Desktop\\Code\\Kadurobot-Shulhan\\magdad\\ball_cv_parameters.json", "r") as file:
                 hsv_values = json.load(file)
                 self.lower_yellow = np.array(hsv_values["lower_yellow"], dtype=np.uint8)
                 self.upper_yellow = np.array(hsv_values["upper_yellow"], dtype=np.uint8)
-                print("Loaded HSV values from hsv_values.json")
+                print("Loaded HSV values from ball_cv_parameters.json")
         except FileNotFoundError:
             print("No HSV values file found. Using default values.")
 
@@ -337,5 +337,5 @@ class YellowBallDetector:
 
 
 if __name__ == "__main__":
-    detector = YellowBallDetector(camera_index=1, initial_ball_radius=20)
+    detector = BallDetector(camera_index=1, initial_ball_radius=20)
     detector.run()

@@ -2,9 +2,9 @@ import time
 
 import keyboard
 
-import cv_v2
+import magdad.ball_cv as ball_cv
 import settings
-import stepper_api_test
+import magdad.stepper_api as stepper_api
 import cv2
 import player_cv
 
@@ -29,10 +29,10 @@ def run_blocking(ball_handler, linear_stepper_handler):
         players_offset = handle_blocking(linear_stepper_handler, players_offset, coordinates)
         # time.sleep(1)
 
-def run_attacking(ball_handler: cv_v2.YellowBallDetector, player_handler: player_cv.PlayersDetector, linear_stepper_handler: stepper_api_test.StepperHandler):
+def run_attacking(ball_handler: ball_cv.BallDetector, player_handler: player_cv.PlayersDetector, linear_stepper_handler: stepper_api.StepperHandler):
     pass
 
-def handle_blocking(linear_stepper_handler: stepper_api_test.StepperHandler, players_offset, coordinates):
+def handle_blocking(linear_stepper_handler: stepper_api.StepperHandler, players_offset, coordinates):
     moving_mms = coordinates[1] % THIRD
     # moving_mms = coordinates[1]
     actual_moving_mms = moving_mms - players_offset
@@ -47,15 +47,15 @@ def handle_blocking(linear_stepper_handler: stepper_api_test.StepperHandler, pla
     linear_stepper_handler.move_to_mm(players_offset)
     return players_offset
 
-def calibration_test(ball_handler: cv_v2.YellowBallDetector, linear_stepper_handler: stepper_api_test.StepperHandler, dist):
+def calibration_test(ball_handler: ball_cv.BallDetector, linear_stepper_handler: stepper_api.StepperHandler, dist):
     linear_stepper_handler.move_to_mm(dist, settings.DIR_UP)
 
-def move_to_fractions_test(ball_handler, linear_stepper_handler: stepper_api_test.StepperHandler, divisor):
+def move_to_fractions_test(ball_handler, linear_stepper_handler: stepper_api.StepperHandler, divisor):
     jumps_mm = round((settings.BOARD_HEIGHT_MM - settings.HEIGHT_PADDING_MM) / divisor)
     for _ in range(divisor):
         linear_stepper_handler.move_to_mm(jumps_mm, settings.DIR_UP)
 
-def move_to_mouse_test(ball_handler: cv_v2.YellowBallDetector, linear_stepper_handler: stepper_api_test.StepperHandler):
+def move_to_mouse_test(ball_handler: ball_cv.BallDetector, linear_stepper_handler: stepper_api.StepperHandler):
     global mouse_coordinates
     def move_to_mouse_test_on_click(event, x, y, flags, param):
         global mouse_coordinates
@@ -78,7 +78,7 @@ def move_to_mouse_test(ball_handler: cv_v2.YellowBallDetector, linear_stepper_ha
         if key == ord("q"):  # Quit if 'q' is pressed
             break
 
-def kick_test(linear_stepper_handler: stepper_api_test.StepperHandler):
+def kick_test(linear_stepper_handler: stepper_api.StepperHandler):
     linear_stepper_handler.set_stepper(settings.ANGULAR_STEPPER)
     time.sleep(0.5)
     linear_stepper_handler.move_to_deg(-100)
@@ -87,10 +87,10 @@ def kick_test(linear_stepper_handler: stepper_api_test.StepperHandler):
 
 def main():
     print("starting loop")
-    ball_handler = cv_v2.YellowBallDetector()
+    ball_handler = ball_cv.BallDetector()
     player_handler = player_cv.PlayersDetector(camera_index=1, initial_group_threshold=20)
     print("ball handler created")
-    linear_stepper_handler = stepper_api_test.StepperHandler(settings.PORT)
+    linear_stepper_handler = stepper_api.StepperHandler(settings.PORT)
     ball_handler.create_windows()
     cv2.namedWindow("Main", cv2.WINDOW_NORMAL)
     reset = input("Reset? Y\\N\n")

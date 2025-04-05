@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import json
 
-import cv_v2, settings, stepper_api_test
+import magdad.ball_cv as ball_cv, settings, magdad.stepper_api as stepper_api
 
 mouse_coordinates = [100, 100]
 
@@ -18,7 +18,7 @@ class PlayersDetector:
         @param camera_index: Index of the camera (default is 0 for the primary camera).
         @param initial_ball_radius: Initial radius of the ball in pixels.
         """
-        self.ball_handler = cv_v2.YellowBallDetector()
+        self.ball_handler = ball_cv.BallDetector()
         self.ball_handler.create_windows()
         self.camera_index = camera_index
         self.group_threshold = initial_group_threshold
@@ -120,7 +120,7 @@ class PlayersDetector:
 
         return mask
     def kick(self):
-        linear_stepper_handler = stepper_api_test.StepperHandler(settings.PORT)
+        linear_stepper_handler = stepper_api.StepperHandler(settings.PORT)
         linear_stepper_handler.set_stepper(settings.ANGULAR_STEPPER)
         time.sleep(0.5)
         linear_stepper_handler.move_to_deg(-60)

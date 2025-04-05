@@ -1,8 +1,13 @@
+import time
 import cv2
 import numpy as np
 import json
 
-class YellowBallDetector:
+import cv_v2, settings, stepper_api_test
+
+mouse_coordinates = [100, 100]
+
+class PlayersDetector:
     """
     Class for detecting shapes intersecting with lines in a live video feed.
     """
@@ -13,6 +18,8 @@ class YellowBallDetector:
         @param camera_index: Index of the camera (default is 0 for the primary camera).
         @param initial_ball_radius: Initial radius of the ball in pixels.
         """
+        self.ball_handler = cv_v2.YellowBallDetector()
+        self.ball_handler.create_windows()
         self.camera_index = camera_index
         self.group_threshold = initial_group_threshold
         self.min_area = 5
@@ -29,6 +36,7 @@ class YellowBallDetector:
         self.load_hsv_values()
 
     def find_shapes_on_lines(self, frame):
+        global mouse_coordinates
         """
         Detect and process shapes that intersect with user-defined lines.
         Groups nearby contours into single bounding boxes if within a defined distance and ensures
@@ -77,6 +85,22 @@ class YellowBallDetector:
                     continue
                 lx1, ly1, lx2, ly2 = line
                 if self.rect_intersects_line(x1, y1, x2, y2, lx1, ly1, lx2, ly2):
+                        # Determine the bounds of the square
+                    r = 15
+                    square_min_x = min(x1, x2)
+                    square_max_x = max(x1, x2)
+                    square_min_y = min(y1, y2)
+                    square_max_y = max(y1, y2)
+
+                    # Closest point in the square to the circle center
+                    closest_x = max(square_min_x, min(mouse_coordinates[0], square_max_x))
+                    closest_y = max(square_min_y, min(mouse_coordinates[1], square_max_y))
+
+                    # Check distance from the closest point to the circle's center
+                    distance_squared = (closest_x - mouse_coordinates[0]) ** 2 + (closest_y - mouse_coordinates[1]) ** 2
+                    if distance_squared <= r ** 2:
+                        mouse_coordinates = [100, 100]
+                        self.kick()
                     valid_boxes.append(box)
                     break
 
@@ -95,7 +119,14 @@ class YellowBallDetector:
             cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Draw valid bounding boxes
 
         return mask
-
+    def kick(self):
+        linear_stepper_handler = stepper_api_test.StepperHandler(settings.PORT)
+        linear_stepper_handler.set_stepper(settings.ANGULAR_STEPPER)
+        time.sleep(0.5)
+        linear_stepper_handler.move_to_deg(-60)
+        time.sleep(0.5)
+        linear_stepper_handler.move_to_deg(60)
+    
     def rect_intersects_line(self, x1, y1, x2, y2, lx1, ly1, lx2, ly2):
         """
         Check if a rectangle intersects with a line.
@@ -160,12 +191,15 @@ class YellowBallDetector:
         @param flags: Any relevant flags passed by OpenCV.
         @param param: Additional parameters (frame).
         """
-        if event == cv2.EVENT_MBUTTONDOWN:
+        global mouse_coordinates
+        if event == cv2.EVENT_RBUTTONDOWN:
             if len(self.lines) > 0 and len(self.lines[-1]) < 4:
                 self.lines[-1].extend([x, y])  # Complete the line
             else:
                 self.lines.append([x, y])  # Start a new line
             print(f"Line defined: {self.lines[-1]}")
+        if event == cv2.EVENT_LBUTTONDOWN:
+            mouse_coordinates = [x, y]
 
     def load_hsv_values(self):
         """
@@ -228,9 +262,10 @@ class YellowBallDetector:
         cv2.createTrackbar("Upper S", "Processed", self.upper_blue[1], 255, update_upper_s)
         cv2.createTrackbar("Lower V", "Processed", self.lower_blue[2], 255, update_lower_v)
         cv2.createTrackbar("Upper V", "Processed", self.upper_blue[2], 255, update_upper_v)
-
+    
         while True:
             ret, frame = self.cap.read()
+            self.ball_handler.run_frame(frame.copy())
             if not ret:
                 print("Failed to capture frame. Exiting.")
                 break
@@ -256,5 +291,5 @@ class YellowBallDetector:
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    detector = YellowBallDetector(camera_index=1, initial_group_threshold=20)
+    detector = PlayersDetector(camera_index=1, initial_group_threshold=20)
     detector.run()

@@ -2,16 +2,8 @@ import time
 from tkinter.constants import RIGHT
 import keyboard
 import pyfirmata
-# import cv
 from settings import RIGHT, LEFT, STEPS_PER_SECOND, CM_PER_STEPS, MAX_VELOCITY
-import cv
 PORT = "COM13"
-
-
-def main2():
-    ball_handler = cv.BallHandler()
-    while True:
-        print(ball_handler.detect_yellow_ball())
 
 def controller(ball_pos):
     print("CONTROLLING:")

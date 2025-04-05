@@ -6,11 +6,12 @@ import cv_v2
 import settings
 import stepper_api_test
 import cv2
+import player_cv
 
 THIRD = settings.BOARD_HEIGHT_MM // 3
 mouse_coordinates = [100, 100]
 
-def run(ball_handler, linear_stepper_handler):
+def run_blocking(ball_handler, linear_stepper_handler):
     players_offset = 0
     while True:
         frame = ball_handler.get_frame()
@@ -25,10 +26,13 @@ def run(ball_handler, linear_stepper_handler):
             quit()
         elif coordinates[1] is None:
             continue
-        players_offset = handle_ball_location(linear_stepper_handler, players_offset, coordinates)
+        players_offset = handle_blocking(linear_stepper_handler, players_offset, coordinates)
         # time.sleep(1)
 
-def handle_ball_location(linear_stepper_handler: stepper_api_test.StepperHandler, players_offset, coordinates):
+def run_attacking(ball_handler: cv_v2.YellowBallDetector, player_handler: player_cv.PlayersDetector, linear_stepper_handler: stepper_api_test.StepperHandler):
+    pass
+
+def handle_blocking(linear_stepper_handler: stepper_api_test.StepperHandler, players_offset, coordinates):
     moving_mms = coordinates[1] % THIRD
     # moving_mms = coordinates[1]
     actual_moving_mms = moving_mms - players_offset
@@ -42,7 +46,6 @@ def handle_ball_location(linear_stepper_handler: stepper_api_test.StepperHandler
     players_offset = moving_mms
     linear_stepper_handler.move_to_mm(players_offset)
     return players_offset
-    
 
 def calibration_test(ball_handler: cv_v2.YellowBallDetector, linear_stepper_handler: stepper_api_test.StepperHandler, dist):
     linear_stepper_handler.move_to_mm(dist, settings.DIR_UP)
@@ -67,18 +70,25 @@ def move_to_mouse_test(ball_handler: cv_v2.YellowBallDetector, linear_stepper_ha
         cv2.circle(frame, mouse_coordinates, 5, (255, 0, 0), -1)
         x, y = ball_handler.apply_perspective_transform(mouse_coordinates[0], mouse_coordinates[1])
         if x is not None:
-            players_offset = handle_ball_location(linear_stepper_handler, players_offset, [x,y])
+            players_offset = handle_blocking(linear_stepper_handler, players_offset, [x,y])
             cv2.putText(frame, f"Mouse at ({int(x)}, {int(y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv2.imshow("Main", frame)
             
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):  # Quit if 'q' is pressed
             break
-        
+
+def kick_test(linear_stepper_handler: stepper_api_test.StepperHandler):
+    linear_stepper_handler.set_stepper(settings.ANGULAR_STEPPER)
+    time.sleep(0.5)
+    linear_stepper_handler.move_to_deg(-100)
+    time.sleep(0.5)
+    linear_stepper_handler.move_to_deg(100)
 
 def main():
     print("starting loop")
     ball_handler = cv_v2.YellowBallDetector()
+    player_handler = player_cv.PlayersDetector(camera_index=1, initial_group_threshold=20)
     print("ball handler created")
     linear_stepper_handler = stepper_api_test.StepperHandler(settings.PORT)
     ball_handler.create_windows()
@@ -89,8 +99,9 @@ def main():
         time.sleep(0.05)
     
     # calibration_test(ball_handler, linear_stepper_handler, 50)
-    move_to_mouse_test(ball_handler, linear_stepper_handler)
-    # run(ball_handler, linear_stepper_handler)
+    # move_to_mouse_test(ball_handler, linear_stepper_handler)
+    run_blocking(ball_handler, linear_stepper_handler)
+    # kick_test(linear_stepper_handler)
 
 
 if __name__ == "__main__":

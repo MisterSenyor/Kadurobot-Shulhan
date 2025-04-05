@@ -1,5 +1,11 @@
-const int stepPin = 5;
-const int dirPin = 3;
+const int linearStepPin = 5;
+const int linearDirPin = 3;
+const int angularStepPin = 6;
+const int angularDirPin = 7;
+int stepPin = linearStepPin;
+int dirPin = linearDirPin;
+// int stepPin = angularStepPin;
+// int dirPin = angularDirPin;
 const int acceleration = 20;
 const int maxStepDelay = 400;
 const int minStepDelay = 900;
@@ -7,12 +13,17 @@ int stepDelay = minStepDelay; // Delay between steps in microseconds
 int stepCounter = 0;          // Tracks the current step position
 
 void setup() {
-  pinMode(stepPin, OUTPUT); // Set step pin as output
-  pinMode(dirPin, OUTPUT);  // Set direction pin as output
+  pinMode(linearStepPin, OUTPUT); // Set step pin as output
+  pinMode(linearDirPin, OUTPUT);  // Set direction pin as output
+  pinMode(angularStepPin, OUTPUT); // Set step pin as output
+  pinMode(angularDirPin, OUTPUT);  // Set direction pin as output
 
   digitalWrite(dirPin, HIGH); // Set initial direction
   Serial.begin(9600); // Start serial communication
   Serial.println("Ready! Send UP, DOWN, or a target step count.");
+
+//  stepPin = angularStepPin;
+//  dirPin = angularDirPin;
 }
 
 void step() {
@@ -23,6 +34,8 @@ void step() {
 }
 
 void loop() {
+// static int stepPin = linearStepPin;
+// static int dirPin = linearDirPin;
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n'); // Read command
     if (command.equals("UP")) {
@@ -32,16 +45,22 @@ void loop() {
     else if (command.equals("DOWN")) {
       digitalWrite(dirPin, HIGH); // Set direction to DOWN
       Serial.println("Direction set to DOWN");
-    } 
+    }
+    else if (command.equals("LIN")) {
+      stepPin = linearStepPin;
+      dirPin = linearDirPin;
+    }
+    else if (command.equals("ANG")) {
+      stepPin = angularStepPin;
+      dirPin = angularDirPin;
+    }
     else {
       String command = Serial.readStringUntil('\n'); // Read number after s command
       // if (command.charAt(0) == 's') { command = command.substring(1); }
       int target = command.toInt(); // Convert the command to an integer
 
       if (target != stepCounter) {
-        Serial.print("Current step count: ");
         Serial.println(stepCounter);
-        Serial.print("Target step count: ");
         Serial.println(target);
 
         int stepsToRun = target - stepCounter; // Calculate steps needed to reach the target
@@ -49,18 +68,14 @@ void loop() {
         digitalWrite(dirPin, direction);
 
         stepsToRun = abs(stepsToRun); // Use absolute value for the loop
-        Serial.print("Running ");
         Serial.print(stepsToRun);
-        Serial.println(" steps. Send 's' to stop.");
         while (Serial.available() > 0) {
           Serial.read(); // Read and discard characters
         }
         for (int i = 0; i < stepsToRun; i++) {
-          
           if (Serial.available() > 0) {
             char stopChar = Serial.read(); // Read the character
             if (stopChar == 's') {
-              Serial.println("Stopping steps...");
               char stopChar = Serial.read(); // empty newline from queue
               break; // Exit the loop
             }
@@ -69,10 +84,7 @@ void loop() {
           stepCounter += (direction == LOW) ? 1 : -1; // Update the step counter
         }
 
-        Serial.print("Steps complete or interrupted. Current step count: ");
         Serial.println(stepCounter);
-      } else {
-        Serial.println("Step counter already at target value.");
       }
     }
   }

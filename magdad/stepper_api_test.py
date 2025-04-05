@@ -14,7 +14,14 @@ class StepperHandler():
 
     def move_to_mm(self, mm):
         print(f"MOVING TO {mm}-----------------")
-        self.arduino.write(f"s\n{round(mm / MM_PER_STEPS)}\n".encode())
+        self.arduino.write(f"s\n{round(mm / MM_PER_STEP)}\n".encode())
+        
+    def move_to_deg(self, deg):
+        print(f"MOVING TO {deg}-----------------")
+        self.arduino.write(f"s\n{round(deg / DEG_PER_STEP)}\n".encode())
+    
+    def set_stepper(self, motor):
+        self.arduino.write(motor.encode())
    
     def move_mm(self, mm, direction):
         print(f"MOVING {mm} IN {direction} -----------------")
@@ -22,7 +29,7 @@ class StepperHandler():
             self.direction = direction
             self.arduino.write(direction.encode())
             time.sleep(0.005)
-        self.arduino.write(f"{round(mm / MM_PER_STEPS)}\n".encode())
+        self.arduino.write(f"{round(mm / MM_PER_STEP)}\n".encode())
     
     def quit(self): 
         self.arduino.close()

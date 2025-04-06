@@ -11,7 +11,50 @@ import player_cv
 THIRD = settings.BOARD_HEIGHT_MM // 3
 mouse_coordinates = [100, 100]
 
-def run_blocking(ball_handler, linear_stepper_handler):
+class Testing:
+    def __init__(self, ball_handler: ball_cv.BallDetector, linear_stepper_handler: stepper_api.StepperHandler):
+        self.ball_handler = ball_handler
+        self.linear_stepper_handler = linear_stepper_handler
+        
+    def calibration_test(self, dist):
+        self.linear_stepper_handler.move_to_mm(dist, settings.DIR_UP)
+
+    def move_to_fractions_test(self, divisor):
+        jumps_mm = round((settings.BOARD_HEIGHT_MM - settings.HEIGHT_PADDING_MM) / divisor)
+        for _ in range(divisor):
+            self.linear_stepper_handler.move_to_mm(jumps_mm, settings.DIR_UP)
+    
+    def move_to_mouse_test(self):
+        global mouse_coordinates
+        def move_to_mouse_test_on_click(event, x, y, flags, param):
+            global mouse_coordinates
+            if event == cv2.EVENT_LBUTTONDOWN:
+                mouse_coordinates = [x, y]
+        
+        players_offset = 0
+        while True:
+            frame = self.ball_handler.get_frame()
+            self.ball_handler.run_frame(frame.copy())
+            cv2.setMouseCallback("Main", move_to_mouse_test_on_click, frame)
+            cv2.circle(frame, mouse_coordinates, 5, (255, 0, 0), -1)
+            x, y = self.ball_handler.apply_perspective_transform(mouse_coordinates[0], mouse_coordinates[1])
+            if x is not None:
+                players_offset = handle_blocking(self.linear_stepper_handler, players_offset, [x,y])
+                cv2.putText(frame, f"Mouse at ({int(x)}, {int(y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.imshow("Main", frame)
+                
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("q"):  # Quit if 'q' is pressed
+                break
+
+    def kick_test(self):
+        self.linear_stepper_handler.set_stepper(settings.ANGULAR_STEPPER)
+        time.sleep(0.5)
+        self.linear_stepper_handler.move_to_deg(-100)
+        time.sleep(0.5)
+        self.linear_stepper_handler.move_to_deg(100)
+
+def run_blocking(ball_handler: ball_cv.BallDetector, linear_stepper_handler):
     players_offset = 0
     while True:
         frame = ball_handler.get_frame()
@@ -47,43 +90,6 @@ def handle_blocking(linear_stepper_handler: stepper_api.StepperHandler, players_
     linear_stepper_handler.move_to_mm(players_offset)
     return players_offset
 
-def calibration_test(ball_handler: ball_cv.BallDetector, linear_stepper_handler: stepper_api.StepperHandler, dist):
-    linear_stepper_handler.move_to_mm(dist, settings.DIR_UP)
-
-def move_to_fractions_test(ball_handler, linear_stepper_handler: stepper_api.StepperHandler, divisor):
-    jumps_mm = round((settings.BOARD_HEIGHT_MM - settings.HEIGHT_PADDING_MM) / divisor)
-    for _ in range(divisor):
-        linear_stepper_handler.move_to_mm(jumps_mm, settings.DIR_UP)
-
-def move_to_mouse_test(ball_handler: ball_cv.BallDetector, linear_stepper_handler: stepper_api.StepperHandler):
-    global mouse_coordinates
-    def move_to_mouse_test_on_click(event, x, y, flags, param):
-        global mouse_coordinates
-        if event == cv2.EVENT_LBUTTONDOWN:
-            mouse_coordinates = [x, y]
-    
-    players_offset = 0
-    while True:
-        frame = ball_handler.get_frame()
-        ball_handler.run_frame(frame.copy())
-        cv2.setMouseCallback("Main", move_to_mouse_test_on_click, frame)
-        cv2.circle(frame, mouse_coordinates, 5, (255, 0, 0), -1)
-        x, y = ball_handler.apply_perspective_transform(mouse_coordinates[0], mouse_coordinates[1])
-        if x is not None:
-            players_offset = handle_blocking(linear_stepper_handler, players_offset, [x,y])
-            cv2.putText(frame, f"Mouse at ({int(x)}, {int(y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.imshow("Main", frame)
-            
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord("q"):  # Quit if 'q' is pressed
-            break
-
-def kick_test(linear_stepper_handler: stepper_api.StepperHandler):
-    linear_stepper_handler.set_stepper(settings.ANGULAR_STEPPER)
-    time.sleep(0.5)
-    linear_stepper_handler.move_to_deg(-100)
-    time.sleep(0.5)
-    linear_stepper_handler.move_to_deg(100)
 
 def main():
     print("starting loop")

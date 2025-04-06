@@ -176,7 +176,8 @@ class BallDetector:
         """
         try:
             # TODO: make this work as a relative path
-            with open("C:\\Users\\TLP-001\\Desktop\\Code\\Kadurobot-Shulhan\\magdad\\ball_cv_parameters.json", "r") as file:
+            # with open("C:\\Users\\TLP-001\\Desktop\\Code\\Kadurobot-Shulhan\\magdad\\ball_cv_parameters.json", "r") as file:
+            with open("ball_cv_parameters.json", "r") as file:
                 hsv_values = json.load(file)
                 self.lower_yellow = np.array(hsv_values["lower_yellow"], dtype=np.uint8)
                 self.upper_yellow = np.array(hsv_values["upper_yellow"], dtype=np.uint8)

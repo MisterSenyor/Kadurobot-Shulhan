@@ -118,7 +118,12 @@ class PlayersDetector:
             x1, y1, x2, y2 = box
             cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Draw valid bounding boxes
 
-        return mask
+        cv2.imshow("Mask", mask)
+        processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
+        cv2.imshow("Processed", processed_frame)
+        
+        return valid_boxes
+
     def kick(self):
         linear_stepper_handler = stepper_api.StepperHandler(settings.PORT)
         linear_stepper_handler.set_stepper(settings.ANGULAR_STEPPER)
@@ -274,14 +279,11 @@ class PlayersDetector:
             cv2.setMouseCallback("Original", self.display_hsv_on_click, frame)
 
             # Detect shapes intersecting lines
-            mask = self.find_shapes_on_lines(frame)
+            coords = self.find_shapes_on_lines(frame)
 
             # Display frames
             cv2.imshow("Original", frame)
-            cv2.imshow("Mask", mask)
             # Highlight the detected area in the processed frame
-            processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
-            cv2.imshow("Processed", processed_frame)
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):  # Quit

@@ -31,6 +31,25 @@ class BallDetector:
         self.quad_mask = None
         self.transform_matrix = None
 
+    def display_hsv_on_click(self, event, x, y, flags, param):
+        """
+        Callback function to display HSV values and set lines on mouse click.
+        @param event: The mouse event.
+        @param x: X-coordinate of the click.
+        @param y: Y-coordinate of the click.
+        @param flags: Any relevant flags passed by OpenCV.
+        @param param: Additional parameters (frame).
+        """
+        global mouse_coordinates
+        if event == cv2.EVENT_RBUTTONDOWN:
+            if len(self.lines) > 0 and len(self.lines[-1]) < 4:
+                self.lines[-1].extend([x, y])  # Complete the line
+            else:
+                self.lines.append([x, y])  # Start a new line
+            print(f"Line defined: {self.lines[-1]}")
+        if event == cv2.EVENT_LBUTTONDOWN:
+            mouse_coordinates = [x, y]
+
     def find_ball_location(self, frame):
         """
         Finds the location of the yellow ball in the given frame.

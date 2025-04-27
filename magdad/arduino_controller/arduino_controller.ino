@@ -49,10 +49,12 @@ void loop() {
     else if (command.equals("LIN")) {
       stepPin = linearStepPin;
       dirPin = linearDirPin;
+      Serial.println("Stepper set to LINEAR");
     }
     else if (command.equals("ANG")) {
       stepPin = angularStepPin;
       dirPin = angularDirPin;
+      Serial.println("Stepper set to ANGULAR");
     }
     else {
       String command = Serial.readStringUntil('\n'); // Read number after s command
@@ -60,15 +62,12 @@ void loop() {
       int target = command.toInt(); // Convert the command to an integer
 
       if (target != stepCounter) {
-        Serial.println(stepCounter);
-        Serial.println(target);
-
         int stepsToRun = target - stepCounter; // Calculate steps needed to reach the target
         int direction = (stepsToRun > 0) ? LOW : HIGH; // Determine direction
         digitalWrite(dirPin, direction);
 
         stepsToRun = abs(stepsToRun); // Use absolute value for the loop
-        Serial.print(stepsToRun);
+        Serial.println(stepsToRun);
         while (Serial.available() > 0) {
           Serial.read(); // Read and discard characters
         }
@@ -83,8 +82,6 @@ void loop() {
           step();
           stepCounter += (direction == LOW) ? 1 : -1; // Update the step counter
         }
-
-        Serial.println(stepCounter);
       }
     }
   }

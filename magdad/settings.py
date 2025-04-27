@@ -21,7 +21,7 @@ R_STEP_PIN = 6
 R_DIR_PIN = 2
 
 # constants for arduino connection
-PORT = "COM13"
+PORT = "COM8"
 DIR_UP = "UP\n"
 DIR_DOWN = "DOWN\n"
 LINEAR_STEPPER = "LIN\n"

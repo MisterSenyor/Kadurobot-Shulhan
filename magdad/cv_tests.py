@@ -25,20 +25,25 @@ def run_ball_tracking_on_video_manual(video_path):
         # Run ball detection on the current frame
 
         frame_number += 1
-
+        # ball_handler.selected_points = 
+        coordinates = ball_handler.run_frame(frame)
+        if coordinates is not None and coordinates[0] is not None and coordinates[1] is not None:
+            print(f"Frame {frame_number}: Ball at ({coordinates[0]:.2f}, {coordinates[1]:.2f})")
+        else:
+            print(f"Frame {frame_number}: No ball detected.")
+            
         # --- Wait for user key ---
         print("Press SPACE to go to next frame, or 'q' to quit.")
         while True:
-            coordinates = ball_handler.run_frame(frame)
-
-            # Print coordinates if detected
-            if coordinates is not None and coordinates[0] is not None and coordinates[1] is not None:
-                print(f"Frame {frame_number}: Ball at ({coordinates[0]:.2f}, {coordinates[1]:.2f})")
-            else:
-                print(f"Frame {frame_number}: No ball detected.")
-            key = cv2.waitKey(1) & 0xFF
+            key = cv2.waitKey(0) & 0xFF
             if key == ord(' '):  # SPACE key
                 break
+            elif key == ord('r'):
+                coordinates = ball_handler.run_frame(frame)
+                if coordinates is not None and coordinates[0] is not None and coordinates[1] is not None:
+                    print(f"Frame {frame_number}: Ball at ({coordinates[0]:.2f}, {coordinates[1]:.2f})")
+                else:
+                    print(f"Frame {frame_number}: No ball detected.")
             elif key == ord('q'):
                 print("Stopped by user.")
                 ball_handler.exit()
@@ -48,5 +53,6 @@ def run_ball_tracking_on_video_manual(video_path):
     ball_handler.exit()
 
 if __name__ == "__main__":
+    # json_path = 
     video_path = "../data/test1.mp4"
     run_ball_tracking_on_video_manual(video_path)

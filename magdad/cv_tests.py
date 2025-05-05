@@ -1,4 +1,8 @@
+import time
+
 import cv2
+import keyboard
+
 import ball_cv
 import settings
 
@@ -46,6 +50,8 @@ def run_ball_tracking_on_video_manual(video_path):
 
     # Release resources at the end
     ball_handler.exit()
+
+
 
 if __name__ == "__main__":
     video_path = "../data/test1.mp4"

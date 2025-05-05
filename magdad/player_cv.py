@@ -215,7 +215,7 @@ class PlayersDetector:
         Load HSV values from a JSON file if available.
         """
         try:
-            with open("hsv_values.json", "r") as file:
+            with open("player_cv_parameters.json", "r") as file:
                 hsv_values = json.load(file)
                 self.lower_blue = np.array(hsv_values["lower_blue"], dtype=np.uint8)
                 self.upper_blue = np.array(hsv_values["upper_blue"], dtype=np.uint8)

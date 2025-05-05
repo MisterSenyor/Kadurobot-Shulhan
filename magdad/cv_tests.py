@@ -1,8 +1,12 @@
 import cv2
 import ball_cv
 import settings
+import json
 
-def run_ball_tracking_on_video_manual(video_path):
+def run_ball_tracking_on_video_manual(json_path):
+    with open(json_path, 'r') as f:
+        json_data = json.load(f)
+    video_path = json_data["path"]
     # Create BallDetector without using a live camera
     ball_handler = ball_cv.BallDetector(camera_index=0)  # camera_index ignored, will override .cap
 
@@ -14,6 +18,10 @@ def run_ball_tracking_on_video_manual(video_path):
         return
 
     ball_handler.create_windows()  # Create display windows
+    ball_handler.selected_points = json_data["table_points"]
+    ret, frame = ball_handler.cap.read()
+    ball_handler.create_quadrilateral_mask(frame)
+    ball_handler.calculate_perspective_transform()
 
     frame_number = 0
     while True:
@@ -25,7 +33,6 @@ def run_ball_tracking_on_video_manual(video_path):
         # Run ball detection on the current frame
 
         frame_number += 1
-        # ball_handler.selected_points = 
         coordinates = ball_handler.run_frame(frame)
         if coordinates is not None and coordinates[0] is not None and coordinates[1] is not None:
             print(f"Frame {frame_number}: Ball at ({coordinates[0]:.2f}, {coordinates[1]:.2f})")
@@ -53,6 +60,5 @@ def run_ball_tracking_on_video_manual(video_path):
     ball_handler.exit()
 
 if __name__ == "__main__":
-    # json_path = 
-    video_path = "../data/test1.mp4"
-    run_ball_tracking_on_video_manual(video_path)
+    json_path = "../data/test1.json"
+    run_ball_tracking_on_video_manual(json_path)

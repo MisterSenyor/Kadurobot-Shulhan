@@ -16,14 +16,24 @@ class BallTracker:
         if len(self.positions) < 2:
             return None, None
 
-        (x1, y1, t1), (x2, y2, t2) = self.positions[0], self.positions[-1]
-        dt = t2 - t1
-        if dt == 0:
-            return 0.0, 0.0
+        vx_list = []
+        vy_list = []
 
-        vx = (x2 - x1) / dt
-        vy = (y2 - y1) / dt
-        return vx, vy
+        for i in range(1, len(self.positions)):
+            x1, y1, t1 = self.positions[i - 1]
+            x2, y2, t2 = self.positions[i]
+            dt = t2 - t1
+            if dt == 0:
+                continue
+            vx_list.append((x2 - x1) / dt)
+            vy_list.append((y2 - y1) / dt)
+
+        if not vx_list or not vy_list:
+            return None, None
+
+        vx_avg = sum(vx_list) / len(vx_list)
+        vy_avg = sum(vy_list) / len(vy_list)
+        return vx_avg, vy_avg
 
     def predict_x_at_y(self, target_y):
         """

@@ -2,8 +2,16 @@ import cv2
 from ball_tracker import BallTracker
 import ball_cv
 import stepper_api
+import json
+import settings
+
+THIRD = settings.BOARD_HEIGHT_MM // 3
+linear_stepper_handler = stepper_api.StepperHandler(settings.PORT)
 
 def run_blocking_tracking_from_video(video_path, ball_handler: ball_cv.BallDetector):
+    with open(json_path, 'r') as f:
+        json_data = json.load(f)
+    video_path = json_data["path"]
     tracker = BallTracker()
     cap = cv2.VideoCapture(video_path)
 
@@ -14,6 +22,11 @@ def run_blocking_tracking_from_video(video_path, ball_handler: ball_cv.BallDetec
     PLAYER_ROW_START = (190, 629)
     PLAYER_ROW_END = (231, 1)
 
+    ball_handler.selected_points = json_data["table_points"]
+    ret, frame = cap.read()
+    ball_handler.create_quadrilateral_mask(frame)
+    ball_handler.calculate_perspective_transform()
+    
     frame_idx = 0
 
     while True:
@@ -53,6 +66,7 @@ def run_blocking_tracking_from_video(video_path, ball_handler: ball_cv.BallDetec
         print(coordinates)
         # Try prediction and draw
         if coordinates is not None:
+            coordinates = ball_handler.find_ball_location(frame)
             tracker.update_position(coordinates[0], coordinates[1])
 
             # Get the line representing ball movement
@@ -82,6 +96,14 @@ def run_blocking_tracking_from_video(video_path, ball_handler: ball_cv.BallDetec
                     if is_point_on_segment((pred_x, pred_y), PLAYER_ROW_START, PLAYER_ROW_END):
                         print(f"🔴 Prediction at ({pred_x:.1f}, {pred_y:.1f}) [inside segment]")
                         cv2.circle(frame, (int(pred_x), int(pred_y)), 10, (0, 0, 255), -1)
+                         # ✅ Transform the predicted point into the plane
+                        transformed_point = ball_handler.apply_perspective_transform(pred_x, pred_y)
+                        if transformed_point.any():
+                            transformed_x, transformed_y = transformed_point
+                            print(f"📐 Transformed prediction: ({transformed_x:.1f}, {transformed_y:.1f})")
+                            
+                            moving_mms = coordinates[0] % THIRD
+                            linear_stepper_handler.move_to_mm(moving_mms)
                     else:
                         print(f"❌ Prediction outside segment: ({pred_x:.1f}, {pred_y:.1f})")
                         closest_point = closest_endpoint((pred_x, pred_y), PLAYER_ROW_START, PLAYER_ROW_END)
@@ -151,7 +173,7 @@ def draw_x(frame, center, size=10, color=(0, 0, 255), thickness=2):
 
 
 if __name__ == "__main__":
-    video_path = "../data/test1.mp4"
+    json_path = "../data/test3.json"
     ball_handler = ball_cv.BallDetector()
     ball_handler.create_windows()
-    run_blocking_tracking_from_video(video_path, ball_handler)
+    run_blocking_tracking_from_video(json_path, ball_handler)

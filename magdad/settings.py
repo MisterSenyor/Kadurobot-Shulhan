@@ -1,5 +1,5 @@
-BOARD_WIDTH_MM = 590
-BOARD_HEIGHT_MM = 340
+BOARD_WIDTH_MM = 340
+BOARD_HEIGHT_MM = 590
 HEIGHT_PADDING_MM = 25 # 25 including both directions
 """
 Ran the following code:

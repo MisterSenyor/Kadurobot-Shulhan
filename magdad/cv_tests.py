@@ -66,10 +66,5 @@ def run_ball_tracking_on_video_manual(json_path):
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
-    json_path = "../data/test1.json"
+    json_path = "../data/test3.json"
     run_ball_tracking_on_video_manual(json_path)
-=======
-    video_path = "../data/test1.mp4"
-    run_ball_tracking_on_video_manual(video_path)
->>>>>>> 3fca8424b3f0c2dd538980bf7ed69e9a08d01552

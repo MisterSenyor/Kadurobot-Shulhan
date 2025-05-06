@@ -13,7 +13,9 @@ const int maxTarget = 540;
 
 const int maxStepDelay = 700;
 int stepDelay = maxStepDelay; // Delay between steps in microseconds
-int stepCounter = 0;          // Tracks the current step position
+int linearStepCounter = 0;          // Tracks the current step position
+int angularStepCounter = 0;          // Tracks the current step position
+
 
 void setup() {
   pinMode(linearStepPin, OUTPUT); // Set step pin as output
@@ -33,7 +35,7 @@ void step() {
   delayMicroseconds(stepDelay);
 }
 
-void stepToTargetConstant(int target) {
+void stepToTargetConstant(int target, int &stepCounter) {
   if (target != stepCounter) {
     Serial.println(stepCounter);
     Serial.println(target);
@@ -63,7 +65,7 @@ void stepToTargetConstant(int target) {
   }
 }
 
-void stepToTargetArticle(int target) {
+void stepToTargetArticle(int target, int &stepCounter) {
   if (target < 0) {target = 0;}
   if (target > maxTarget) {target = maxTarget;}
   long stepsToGo = target - stepCounter;
@@ -121,8 +123,7 @@ void loop() {
       String command = Serial.readStringUntil('\n'); // Read number after s command
       Serial.println(command);
       int target = command.toInt(); // Convert the command to an integer
-
-      stepToTargetArticle(target);
+      stepToTargetArticle(target, stepPin == linearStepPin ? linearStepCounter : angularStepCounter);
 
     }
   }

@@ -2,6 +2,8 @@ import time
 from collections import deque
 import numpy as np
 
+MIN_MOVEMENT = 7
+
 class BallTracker:
     def __init__(self, max_history=5):
         self.positions = [] # Store (x, y, t)
@@ -10,6 +12,14 @@ class BallTracker:
         now = time.time()
         if x is None or y is None:
             return
+        # check if the ball has moved significantly
+        if self.positions:
+            last_x, last_y, last_t = self.positions[-1]
+            dx = x - last_x
+            dy = y - last_y
+            distance = np.sqrt(dx**2 + dy**2)
+            if distance < MIN_MOVEMENT:
+                return
         self.positions.append((x, y, now))
 
     def get_velocity(self):
@@ -60,7 +70,7 @@ class BallTracker:
             return None  # Not enough points for a line
 
         # Always use only the last 2 positions
-        print(self.positions[-2:])
+        # print(self.positions[-2:])
         (x1, y1, _), (x2, y2, _) = self.positions[-2:]
 
         if x2 == x1:

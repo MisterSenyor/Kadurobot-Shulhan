@@ -8,8 +8,8 @@ for _ in range(100):
 and got 19.5 mm movement for steps_per_second = 100
 """
 STEPS_PER_SECOND = 10
-CM_PER_STEPS = 1.95 / 100
-MM_PER_STEP = 108 / 500
+CM_PER_STEPS = 7.9 / 400
+MM_PER_STEP = 79 / 400
 DEG_PER_STEP = 360 / 400
 
 MAX_VELOCITY = 100000

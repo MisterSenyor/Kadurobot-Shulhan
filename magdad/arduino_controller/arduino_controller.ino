@@ -2,12 +2,14 @@ const int linearStepPin = 5;
 const int linearDirPin = 2;
 const int angularStepPin = 6;
 const int angularDirPin = 3;
-int stepPin = angularStepPin;
-int dirPin = angularDirPin;
+int stepPin = linearStepPin;
+int dirPin = linearDirPin;
 // int stepPin = angularStepPin;
 // int dirPin = angularDirPin;
 const int acceleration = 2;
 const int minStepDelay = 500;
+const int minStepDist = 20;
+const int maxTarget = 540;
 
 const int maxStepDelay = 700;
 int stepDelay = maxStepDelay; // Delay between steps in microseconds
@@ -62,7 +64,13 @@ void stepToTargetConstant(int target) {
 }
 
 void stepToTargetArticle(int target) {
+  if (target < 0) {target = 0;}
+  if (target > maxTarget) {target = maxTarget;}
   long stepsToGo = target - stepCounter;
+  if ((stepsToGo > 0 && stepsToGo < minStepDist) || (stepsToGo < 0 && stepsToGo > - minStepDist)) {
+    return;
+  }
+  
   int direction = (stepsToGo > 0) ? LOW : HIGH;
   digitalWrite(dirPin, direction);
   stepsToGo = abs(stepsToGo);

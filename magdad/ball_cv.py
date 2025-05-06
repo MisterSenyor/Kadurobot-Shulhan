@@ -16,7 +16,7 @@ class BallDetector:
         """
         self.camera_index = camera_index
         self.ball_radius = initial_ball_radius
-        self.min_ball_radius = 9
+        self.min_ball_radius = 7
         self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use CAP_DSHOW for faster loading on Windows
 
         # HSV range for yellow color based on the uploaded image
@@ -210,12 +210,12 @@ class BallDetector:
 
     def create_windows(self):
         cv2.namedWindow("Ball-Original", cv2.WINDOW_NORMAL)
-        # cv2.namedWindow("Ball-Processed", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("Ball-Processed", cv2.WINDOW_NORMAL)
         # cv2.namedWindow("Ball-Mask", cv2.WINDOW_NORMAL)
 
         # Enable aspect-ratio scaling for fullscreen
         cv2.setWindowProperty("Ball-Original", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
-        # cv2.setWindowProperty("Ball-Processed", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
+        cv2.setWindowProperty("Ball-Processed", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
         # cv2.setWindowProperty("Ball-Mask", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
 
         # Create a trackbar for adjusting the ball radius
@@ -225,8 +225,8 @@ class BallDetector:
         def set_min_radius(val):
             self.min_ball_radius = max(1, val)  # Ensure minimum radius is at least 1
 
-        # cv2.createTrackbar("Ball Radius", "Ball-Processed", self.ball_radius, 100, set_radius)
-        # cv2.createTrackbar("Min Radius", "Ball-Processed", self.min_ball_radius, 50, set_min_radius)
+        cv2.createTrackbar("Ball Radius", "Ball-Processed", self.ball_radius, 100, set_radius)
+        cv2.createTrackbar("Min Radius", "Ball-Processed", self.min_ball_radius, 50, set_min_radius)
 
         # Create trackbars for adjusting HSV values
         def update_lower_h(val):
@@ -247,12 +247,12 @@ class BallDetector:
         def update_upper_v(val):
             self.upper_yellow[2] = val
 
-        # cv2.createTrackbar("Lower H", "Ball-Processed", self.lower_yellow[0], 179, update_lower_h)
-        # cv2.createTrackbar("Upper H", "Ball-Processed", self.upper_yellow[0], 179, update_upper_h)
-        # cv2.createTrackbar("Lower S", "Ball-Processed", self.lower_yellow[1], 255, update_lower_s)
-        # cv2.createTrackbar("Upper S", "Ball-Processed", self.upper_yellow[1], 255, update_upper_s)
-        # cv2.createTrackbar("Lower V", "Ball-Processed", self.lower_yellow[2], 255, update_lower_v)
-        # cv2.createTrackbar("Upper V", "Ball-Processed", self.upper_yellow[2], 255, update_upper_v)
+        cv2.createTrackbar("Lower H", "Ball-Processed", self.lower_yellow[0], 179, update_lower_h)
+        cv2.createTrackbar("Upper H", "Ball-Processed", self.upper_yellow[0], 179, update_upper_h)
+        cv2.createTrackbar("Lower S", "Ball-Processed", self.lower_yellow[1], 255, update_lower_s)
+        cv2.createTrackbar("Upper S", "Ball-Processed", self.upper_yellow[1], 255, update_upper_s)
+        cv2.createTrackbar("Lower V", "Ball-Processed", self.lower_yellow[2], 255, update_lower_v)
+        cv2.createTrackbar("Upper V", "Ball-Processed", self.upper_yellow[2], 255, update_upper_v)
 
     def run_frame(self, frame):
         """
@@ -284,7 +284,7 @@ class BallDetector:
 
         # Highlight the detected area in the processed frame
         processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
-        # cv2.imshow("Ball-Processed", processed_frame)
+        cv2.imshow("Ball-Processed", processed_frame)
 
         key = cv2.waitKey(1) & 0xFF
 
@@ -339,7 +339,7 @@ class BallDetector:
 
             # Highlight the detected area in the processed frame
             processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
-            # cv2.imshow("Ball-Processed", processed_frame)
+            cv2.imshow("Ball-Processed", processed_frame)
 
             key = cv2.waitKey(1) & 0xFF
 

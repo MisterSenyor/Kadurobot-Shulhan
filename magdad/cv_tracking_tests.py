@@ -5,6 +5,7 @@ import numpy as np
 import requests
 from ball_tracker import BallTracker
 import ball_cv
+import player_cv
 import stepper_api
 import settings
 
@@ -15,6 +16,7 @@ class BallTrackingSystem:
         self.ip_cam_url = ip_cam_url
         self.tracker = BallTracker()
         self.ball_handler = ball_cv.BallDetector()
+        self.player_handler = player_cv.PlayersDetector()
         self.linear_stepper_handler = stepper_api.StepperHandler(settings.PORT)
         self.load_config()
         self.recording = False
@@ -28,6 +30,7 @@ class BallTrackingSystem:
         self.table_points = data["table_points"]
         self.player_row_start = data["rows"][0][0]
         self.player_row_end = data["rows"][0][1]
+        self.player_handler.lines = data["rows"]
         self.ball_handler.selected_points = self.table_points
 
     def fetch_ipcam_frame(self):
@@ -42,9 +45,7 @@ class BallTrackingSystem:
 
     def fetch_webcam_frame(self):
         if not hasattr(self, "webcam_cap"):
-            self.webcam_cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-            self.webcam_cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
-            self.webcam_cap.set(cv2.CAP_PROP_EXPOSURE, -4)
+            self.webcam_cap = cv2.VideoCapture(0)
         ret, frame = self.webcam_cap.read()
         return frame if ret else None
 
@@ -134,7 +135,7 @@ class BallTrackingSystem:
 
     def run_tracking_live(self):
         self.initialize_perspective()
-        self.ball_handler.create_windows()
+
         print("🎮 Press 'r' to record, 's' to stop, 'q' to quit.")
 
         while True:
@@ -153,6 +154,7 @@ class BallTrackingSystem:
                 self.stop_recording()
 
             coordinates = self.ball_handler.run_frame(frame)
+            player_boxes = self.player_handler.find_shapes_on_lines(frame)
             cv2.line(frame, self.player_row_start, self.player_row_end, (0, 255, 0), 2)
             self.handle_coordinates_logic(frame, coordinates)
 

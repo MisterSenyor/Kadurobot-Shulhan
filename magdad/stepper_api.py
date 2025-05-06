@@ -17,7 +17,7 @@ class StepperHandler():
         self.arduino.write(f"s\n{round(mm / MM_PER_STEP)}\n".encode())
         
     def move_to_deg(self, deg):
-        print(f"MOVING TO {deg}-----------------")
+        # print(f"MOVING TO {deg}-----------------")
         self.arduino.write(f"s\n{round(deg / DEG_PER_STEP)}\n".encode())
     
     def set_stepper(self, motor):

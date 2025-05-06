@@ -8,7 +8,7 @@ class BallDetector:
     Class for detecting a yellow ball in a live video feed.
     """
 
-    def __init__(self, camera_index=1, initial_ball_radius=28):
+    def __init__(self, camera_index=0, initial_ball_radius=20):
         """
         Initialize the YellowBallDetector.
         @param camera_index: Index of the camera (default is 0 for the primary camera).
@@ -16,7 +16,7 @@ class BallDetector:
         """
         self.camera_index = camera_index
         self.ball_radius = initial_ball_radius
-        self.min_ball_radius = 15
+        self.min_ball_radius = 9
         self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use CAP_DSHOW for faster loading on Windows
 
         # HSV range for yellow color based on the uploaded image

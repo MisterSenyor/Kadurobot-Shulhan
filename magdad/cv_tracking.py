@@ -8,21 +8,54 @@ import ball_cv
 import player_cv
 import stepper_api
 import settings
+import serial
 
 
 class BallTrackingSystem:
-    def __init__(self, json_path, ip_cam_url=None):
+    def __init__(self, json_path, ip_cam_url=None, video=False):
         self.json_path = json_path
+        self.pausing = video
         self.ip_cam_url = ip_cam_url
         self.tracker = BallTracker()
         self.ball_handler = ball_cv.BallDetector()
-        self.player_handler = player_cv.PlayersDetector()
-        self.linear_stepper_handler = stepper_api.StepperHandler(settings.PORT)
+        # self.player_handler = player_cv.PlayersDetector()
+        self.steppers = self.initialize_steppers()
+        self.linear_stepper_handler = self.steppers["linear"][0]
+        self.angular_stepper_handler = self.steppers["angular"][0]
         self.load_config()
         self.recording = False
         self.video_writer = None
         self.frame_idx = 0
         self.use_ipcam = ip_cam_url is not None
+        self.linear_stepper_handler.select()
+        if video:
+            with open(json_path, 'r') as f:
+                json_data = json.load(f)
+            self.source = json_data["path"]
+        else:
+            self.source = 1
+
+    def kick(self):
+        self.angular_stepper_handler.select()
+        time.sleep(0.05)
+        self.angular_stepper_handler.move_to_deg(-100)
+        time.sleep(0.05)
+        self.angular_stepper_handler.move_to_deg(100)
+        self.linear_stepper_handler.select()
+
+    def initialize_steppers(self):
+        serials = [serial.Serial(port, baudrate=settings.BAUD_RATE) for port in settings.SERIAL_PORTS]
+        if len(serials) == 2:
+            steppers = {
+                "linear": [stepper_api.StepperHandler(serials[0], stepper_type=stepper_types) for stepper_types in settings.TRIPLE_STEPPER_TYPES],
+                "angular": [stepper_api.StepperHandler(serials[0], stepper_type=stepper_types) for stepper_types in settings.TRIPLE_STEPPER_TYPES],
+            }
+        else:
+            steppers = {
+                "linear": [stepper_api.StepperHandler(arduino_serial, stepper_type=settings.LINEAR_STEPPER) for arduino_serial in serials],
+                "angular": [stepper_api.StepperHandler(arduino_serial, stepper_type=settings.ANGULAR_STEPPER) for arduino_serial in serials],
+            }
+        return steppers
 
     def load_config(self):
         with open(self.json_path, 'r') as f:
@@ -30,7 +63,7 @@ class BallTrackingSystem:
         self.table_points = data["table_points"]
         self.player_row_start = data["rows"][0][0]
         self.player_row_end = data["rows"][0][1]
-        self.player_handler.lines = data["rows"]
+        # self.player_handler.lines = data["rows"]
         self.ball_handler.selected_points = self.table_points
 
     def fetch_ipcam_frame(self):
@@ -45,7 +78,7 @@ class BallTrackingSystem:
 
     def fetch_webcam_frame(self):
         if not hasattr(self, "webcam_cap"):
-            self.webcam_cap = cv2.VideoCapture(0)
+            self.webcam_cap = cv2.VideoCapture(self.source, cv2.CAP_DSHOW)
         ret, frame = self.webcam_cap.read()
         return frame if ret else None
 
@@ -66,52 +99,66 @@ class BallTrackingSystem:
         coordinates = self.ball_handler.find_ball_location(frame)
         self.tracker.update_position(coordinates[0], coordinates[1])
 
-        ball_line = self.tracker.get_last_line()
-        if ball_line is not None:
-            slope, intercept = ball_line
-            h, w = frame.shape[:2]
-            x1, y1 = 0, int(slope * 0 + intercept)
-            x2, y2 = w - 1, int(slope * (w - 1) + intercept)
-            cv2.line(frame, (x1, y1), (x2, y2), (255, 255, 0), 2)
+        line = self.tracker.get_last_line()
+        if line is not None:
+            cv2.line(frame, line[0], line[1], (255, 255, 0), 2)
 
         prediction = self.predict_intersection()
-        if prediction is not None:
-            pred_x, pred_y = prediction
-            if 0 <= pred_x < frame.shape[1] and 0 <= pred_y < frame.shape[0]:
-                if self.is_point_on_segment((pred_x, pred_y)):
-                    cv2.circle(frame, (int(pred_x), int(pred_y)), 10, (0, 0, 255), -1)
-                    transformed_point = self.ball_handler.apply_perspective_transform(pred_x, pred_y)
-                    if transformed_point.any():
-                        transformed_x, transformed_y = transformed_point
-                        moving_mms = coordinates[0] % (settings.BOARD_HEIGHT_MM // 3)
-                        self.linear_stepper_handler.move_to_mm(moving_mms)
-                else:
-                    closest = self.closest_endpoint((pred_x, pred_y))
-                    self.draw_x(frame, closest, size=15, color=(255, 0, 0), thickness=2)
+        if prediction is None:
+            return
+        pred_x, pred_y = prediction
+        if self.is_point_on_segment((pred_x, pred_y)):
+            cv2.circle(frame, (int(pred_x), int(pred_y)), 10, (0, 0, 255), -1)
+            transformed_point = self.ball_handler.apply_perspective_transform(pred_x, pred_y)
+            # key = cv2.waitKey(1) & 0xFF
+
+            # if key == ord("g")
+            if transformed_point.any():
+                transformed_x, transformed_y = transformed_point
+                moving_mms = transformed_y % ((settings.BOARD_WIDTH_MM - settings.PLAYER_WIDTH_MM) // 3)
+                self.linear_stepper_handler.move_to_mm(moving_mms)
+        else:
+            closest = self.closest_endpoint((pred_x, pred_y))
+            self.draw_x(frame, closest, size=15, color=(255, 0, 0), thickness=2)
 
     def predict_intersection(self):
-        ball_line = self.tracker.get_last_line()
-        if ball_line is None:
+        line = self.tracker.get_last_line()
+        if line is None:
             return None
 
-        ball_slope, ball_intercept = ball_line
-        x1, y1 = self.player_row_start
-        x2, y2 = self.player_row_end
+        (x1, y1), (x2, y2) = line
+        (x3, y3) = self.player_row_start
+        (x4, y4) = self.player_row_end
 
-        if x1 == x2:
-            x = x1
-            y = ball_slope * x + ball_intercept
-        else:
-            player_slope = (y2 - y1) / (x2 - x1)
-            player_intercept = y1 - player_slope * x1
+        def ccw(A, B, C):
+            return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
 
-            if ball_slope == player_slope:
-                return None
+        def segments_intersect(A, B, C, D):
+            return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
 
-            x = (player_intercept - ball_intercept) / (ball_slope - player_slope)
-            y = ball_slope * x + ball_intercept
+        A, B = (x1, y1), (x2, y2)
+        C, D = (x3, y3), (x4, y4)
 
-        return (x, y)
+        if not segments_intersect(A, B, C, D):
+            return None
+
+        # Compute intersection point
+        def line_intersection(p1, p2, p3, p4):
+            """Returns intersection point of lines p1p2 and p3p4"""
+            x1, y1 = p1
+            x2, y2 = p2
+            x3, y3 = p3
+            x4, y4 = p4
+
+            denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+            if abs(denom) < 1e-6:
+                return None  # Lines are parallel
+
+            px = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / denom
+            py = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom
+            return (px, py)
+
+        return line_intersection(A, B, C, D)
 
     def is_point_on_segment(self, point, tolerance=1e-6):
         px, py = point
@@ -135,7 +182,7 @@ class BallTrackingSystem:
 
     def run_tracking_live(self):
         self.initialize_perspective()
-
+        self.ball_handler.create_windows()
         print("🎮 Press 'r' to record, 's' to stop, 'q' to quit.")
 
         while True:
@@ -152,20 +199,27 @@ class BallTrackingSystem:
                 self.start_recording(frame)
             elif key == ord("s") and self.recording:
                 self.stop_recording()
+            elif key == ord("g"):
+                label = "Recording..." if self.recording else f"Live {self.tracker.get_velocity()}"
+                cv2.putText(frame, label, (10, 400), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                            (0, 0, 255) if self.recording else (0, 255, 0), 2)
 
             coordinates = self.ball_handler.run_frame(frame)
-            player_boxes = self.player_handler.find_shapes_on_lines(frame)
+            # player_boxes = self.player_handler.find_shapes_on_lines(frame)
             cv2.line(frame, self.player_row_start, self.player_row_end, (0, 255, 0), 2)
             self.handle_coordinates_logic(frame, coordinates)
 
             if self.recording and self.video_writer:
                 self.video_writer.write(frame)
 
-            label = "Recording..." if self.recording else "Live"
-            cv2.putText(frame, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                        (0, 0, 255) if self.recording else (0, 255, 0), 2)
+
             cv2.namedWindow("Ball Tracking", cv2.WINDOW_NORMAL)
             cv2.imshow("Ball Tracking", frame)
+            if self.pausing:
+                while True:
+                    key = cv2.waitKey(0) & 0xFF
+                    if key == ord(' '):  # SPACE key
+                        break
 
         if self.video_writer:
             self.video_writer.release()
@@ -188,7 +242,8 @@ class BallTrackingSystem:
 
 
 if __name__ == "__main__":
-    json_path = "../data/test3.json"
+    # json_path = "../data/test3.json"
+    json_path = "../data/camera_data.json"
     ip_cam_url = "http://192.168.1.123:8080/shot.jpg"  # Set to None to use USB webcam
 
     # system = BallTrackingSystem(json_path, ip_cam_url=ip_cam_url)

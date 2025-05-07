@@ -27,7 +27,7 @@ class PlayersDetector:
         self.camera_index = camera_index
         self.group_threshold = initial_group_threshold
         self.min_area = 5
-        self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use CAP_DSHOW for faster loading on Windows
+        # self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use CAP_DSHOW for faster loading on Windows
 
         # HSV range for blue color
         self.lower_blue = np.array([43, 150, 255])  # Default lower bound

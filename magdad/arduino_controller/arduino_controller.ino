@@ -8,7 +8,7 @@ int dirPin = linearDirPin;
 // int dirPin = angularDirPin;
 const int acceleration = 2;
 const int minStepDelay = 500;
-const int minStepDist = 20;
+const int minStepDist = 100;
 const int maxTarget = 540;
 
 const int maxStepDelay = 700;
@@ -66,7 +66,7 @@ void stepToTargetConstant(int target, int &stepCounter) {
 }
 
 void stepToTargetArticle(int target, int &stepCounter) {
-  if (target < 0) {target = 0;}
+  if (target < 0 && stepPin == linearStepPin) {target = 0;}
   if (target > maxTarget) {target = maxTarget;}
   long stepsToGo = target - stepCounter;
   if ((stepsToGo > 0 && stepsToGo < minStepDist) || (stepsToGo < 0 && stepsToGo > - minStepDist)) {

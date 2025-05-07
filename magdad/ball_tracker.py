@@ -7,9 +7,9 @@ MIN_MOVEMENT = 7
 class BallTracker:
     def __init__(self, max_history=5):
         self.positions = [] # Store (x, y, t)
+        self.max_history = max_history
 
     def update_position(self, x, y):
-        now = time.time()
         if x is None or y is None:
             return
         # check if the ball has moved significantly
@@ -19,8 +19,11 @@ class BallTracker:
             dy = y - last_y
             distance = np.sqrt(dx**2 + dy**2)
             if distance < MIN_MOVEMENT:
+                # self.
                 return
-        self.positions.append((x, y, now))
+        if len(self.positions) >= self.max_history:
+            self.positions.pop(0)
+        self.positions.append((x, y, time.time()))
 
     def get_velocity(self):
         if len(self.positions) < 2:
@@ -31,12 +34,9 @@ class BallTracker:
 
         for i in range(1, len(self.positions)):
             x1, y1, t1 = self.positions[i - 1]
-            x2, y2, t2 = self.positions[i]
-            dt = t2 - t1
-            if dt == 0:
-                continue
-            vx_list.append((x2 - x1) / dt)
-            vy_list.append((y2 - y1) / dt)
+            x2, y2, t2 = self.positions[-1]
+            vx_list.append((x2 - x1))
+            vy_list.append((y2 - y1))
 
         if not vx_list or not vy_list:
             return None, None
@@ -67,15 +67,18 @@ class BallTracker:
 
     def get_last_line(self):
         if len(self.positions) < 2:
-            return None  # Not enough points for a line
+            return None
 
-        # Always use only the last 2 positions
-        # print(self.positions[-2:])
-        (x1, y1, _), (x2, y2, _) = self.positions[-2:]
+        dx, dy = self.get_velocity()
+        norm = np.hypot(dx, dy)
 
-        if x2 == x1:
-            return None  # Avoid division by zero
+        if norm < 1e-6:
+            return None  # Movement too small to determine direction
 
-        slope = (y2 - y1) / (x2 - x1)
-        intercept = y1 - slope * x1
-        return slope, intercept
+        unit_dx = dx / norm
+        unit_dy = dy / norm
+
+        start = self.positions[-1]
+        end = (start[0] + unit_dx * 1000, start[1] + unit_dy * 1000)  # 600 pixels forward
+
+        return (int(start[0]), int(start[1])), (int(end[0]), int(end[1]))

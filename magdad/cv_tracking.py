@@ -1,3 +1,5 @@
+import random
+
 import cv2
 import time
 import json
@@ -34,26 +36,43 @@ class BallTrackingSystem:
             self.source = json_data["path"]
         else:
             self.source = 1
+        self.MIN_KICK_DIST = 100000
 
     def kick(self):
+        TIME_DELAY = 0.1
+        self.angular_stepper_handler.select()
+        time.sleep(TIME_DELAY)
+        self.angular_stepper_handler.move_to_deg(-100)
+        time.sleep(TIME_DELAY)
+        self.angular_stepper_handler.move_to_deg(100)
+        time.sleep(TIME_DELAY)
+        self.angular_stepper_handler.move_to_deg(0)
+        time.sleep(TIME_DELAY)
+        self.linear_stepper_handler.select()
+
+    def spin360(self):
         self.angular_stepper_handler.select()
         time.sleep(0.05)
-        self.angular_stepper_handler.move_to_deg(-100)
+        self.angular_stepper_handler.move_to_deg(-360)
         time.sleep(0.05)
-        self.angular_stepper_handler.move_to_deg(100)
+        self.angular_stepper_handler.move_to_deg(360)
         self.linear_stepper_handler.select()
 
     def initialize_steppers(self):
         serials = [serial.Serial(port, baudrate=settings.BAUD_RATE) for port in settings.SERIAL_PORTS]
         if len(serials) == 2:
             steppers = {
-                "linear": [stepper_api.StepperHandler(serials[0], stepper_type=stepper_types) for stepper_types in settings.TRIPLE_STEPPER_TYPES],
-                "angular": [stepper_api.StepperHandler(serials[0], stepper_type=stepper_types) for stepper_types in settings.TRIPLE_STEPPER_TYPES],
+                "linear": [stepper_api.StepperHandler(serials[0], stepper_type=stepper_types) for stepper_types in
+                           settings.TRIPLE_STEPPER_TYPES],
+                "angular": [stepper_api.StepperHandler(serials[0], stepper_type=stepper_types) for stepper_types in
+                            settings.TRIPLE_STEPPER_TYPES],
             }
         else:
             steppers = {
-                "linear": [stepper_api.StepperHandler(arduino_serial, stepper_type=settings.LINEAR_STEPPER) for arduino_serial in serials],
-                "angular": [stepper_api.StepperHandler(arduino_serial, stepper_type=settings.ANGULAR_STEPPER) for arduino_serial in serials],
+                "linear": [stepper_api.StepperHandler(arduino_serial, stepper_type=settings.LINEAR_STEPPER) for
+                           arduino_serial in serials],
+                "angular": [stepper_api.StepperHandler(arduino_serial, stepper_type=settings.ANGULAR_STEPPER) for
+                            arduino_serial in serials],
             }
         return steppers
 
@@ -103,6 +122,12 @@ class BallTrackingSystem:
         if line is not None:
             cv2.line(frame, line[0], line[1], (255, 255, 0), 2)
 
+        # distance = self.calculate_distance_ball_to_line(
+        #     self.ball_handler.apply_perspective_transform(coordinates[0], coordinates[1]))
+        # if not random.randint(0, 1000):  # Adjust the threshold as needed
+        #     self.kick()
+        #     print("trying to kick")
+
         prediction = self.predict_intersection()
         if prediction is None:
             return
@@ -117,6 +142,8 @@ class BallTrackingSystem:
                 transformed_x, transformed_y = transformed_point
                 moving_mms = transformed_y % ((settings.BOARD_WIDTH_MM - settings.PLAYER_WIDTH_MM) // 3)
                 self.linear_stepper_handler.move_to_mm(moving_mms)
+                # if ball is close enough - kick
+                # first calculate distance
         else:
             closest = self.closest_endpoint((pred_x, pred_y))
             self.draw_x(frame, closest, size=15, color=(255, 0, 0), thickness=2)
@@ -165,7 +192,7 @@ class BallTrackingSystem:
         x1, y1 = self.player_row_start
         x2, y2 = self.player_row_end
         return (min(x1, x2) - tolerance <= px <= max(x1, x2) + tolerance) and \
-               (min(y1, y2) - tolerance <= py <= max(y1, y2) + tolerance)
+            (min(y1, y2) - tolerance <= py <= max(y1, y2) + tolerance)
 
     def closest_endpoint(self, pred_point):
         px, py = pred_point
@@ -184,7 +211,6 @@ class BallTrackingSystem:
         self.initialize_perspective()
         self.ball_handler.create_windows()
         print("🎮 Press 'r' to record, 's' to stop, 'q' to quit.")
-
         while True:
             frame = self.fetch_ipcam_frame() if self.use_ipcam else self.fetch_webcam_frame()
             if frame is None or frame.shape[0] <= 1 or frame.shape[1] <= 1:
@@ -203,6 +229,9 @@ class BallTrackingSystem:
                 label = "Recording..." if self.recording else f"Live {self.tracker.get_velocity()}"
                 cv2.putText(frame, label, (10, 400), cv2.FONT_HERSHEY_SIMPLEX, 1,
                             (0, 0, 255) if self.recording else (0, 255, 0), 2)
+            # elif key == ord("k"):
+            #     self.kick()
+            #     print("Kicking...")
 
             coordinates = self.ball_handler.run_frame(frame)
             # player_boxes = self.player_handler.find_shapes_on_lines(frame)
@@ -211,7 +240,6 @@ class BallTrackingSystem:
 
             if self.recording and self.video_writer:
                 self.video_writer.write(frame)
-
 
             cv2.namedWindow("Ball Tracking", cv2.WINDOW_NORMAL)
             cv2.imshow("Ball Tracking", frame)
@@ -239,6 +267,16 @@ class BallTrackingSystem:
             self.video_writer.release()
             self.video_writer = None
             print("⏹️ Stopped recording.")
+
+    def calculate_distance_ball_to_line(self, ball_coords):
+        ball_x, ball_y = ball_coords
+        x1, y1 = self.player_row_start
+        x2, y2 = self.player_row_end
+
+        # Calculate the distance from the ball to the line segment
+        num = abs((y2 - y1) * ball_x - (x2 - x1) * ball_y + x2 * y1 - y2 * x1)
+        denom = np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2)
+        return num / denom ** 2
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ class StepperHandler:
         self.arduino.write(self.direction.encode())
 
     def select(self):
-        self.arduino.write(f's\n{self.stepper_type}'.encode())
+        self.arduino.write(f's{self.stepper_type}'.encode())
 
     def move_to_mm(self, mm):
         print(f"MOVING TO {mm}-----------------")

@@ -4,20 +4,23 @@ import time
 from settings import *
 
 
-class StepperHandler():
-    def __init__(self, port):
-        self.baud_rate = 9600
-        self.arduino = serial.Serial(port, self.baud_rate)
+class StepperHandler:
+    def __init__(self, arduino_serial, stepper_type=LINEAR_STEPPER):
+        self.arduino = arduino_serial
         self.direction = DIR_UP
+        self.stepper_type = stepper_type
         time.sleep(2)  # Wait for the connection to establish
         self.arduino.write(self.direction.encode())
+
+    def select(self):
+        self.arduino.write(f's{self.stepper_type}'.encode())
 
     def move_to_mm(self, mm):
         print(f"MOVING TO {mm}-----------------")
         self.arduino.write(f"s\n{round(mm / MM_PER_STEP)}\n".encode())
         
     def move_to_deg(self, deg):
-        print(f"MOVING TO {deg}-----------------")
+        # print(f"MOVING TO {deg}-----------------")
         self.arduino.write(f"s\n{round(deg / DEG_PER_STEP)}\n".encode())
     
     def set_stepper(self, motor):

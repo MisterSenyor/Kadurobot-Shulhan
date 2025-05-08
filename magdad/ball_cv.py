@@ -8,7 +8,7 @@ class BallDetector:
     Class for detecting a yellow ball in a live video feed.
     """
 
-    def __init__(self, camera_index=1, initial_ball_radius=28):
+    def __init__(self, camera_index=0, initial_ball_radius=20):
         """
         Initialize the YellowBallDetector.
         @param camera_index: Index of the camera (default is 0 for the primary camera).
@@ -16,7 +16,7 @@ class BallDetector:
         """
         self.camera_index = camera_index
         self.ball_radius = initial_ball_radius
-        self.min_ball_radius = 15
+        self.min_ball_radius = 7
         self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use CAP_DSHOW for faster loading on Windows
 
         # HSV range for yellow color based on the uploaded image
@@ -129,7 +129,7 @@ class BallDetector:
             quad_points = np.float32(self.selected_points)
 
             # Define the destination points for the transformation (this should be a rectangle)
-            dst_points = np.float32([[0, 0], [BOARD_WIDTH_MM, 0], [BOARD_WIDTH_MM, BOARD_HEIGHT_MM], [0, BOARD_HEIGHT_MM]])
+            dst_points = np.float32([[BOARD_HEIGHT_MM, BOARD_WIDTH_MM], [BOARD_HEIGHT_MM, 0], [0, 0], [0, BOARD_WIDTH_MM]])
 
             # Compute the perspective transform matrix
             self.transform_matrix = cv2.getPerspectiveTransform(quad_points, dst_points)
@@ -272,7 +272,7 @@ class BallDetector:
             if transformed_x is None:
                 cv2.putText(frame, f"Ball at ({int(ball_x)}, {int(ball_y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             else:
-                cv2.putText(frame, f"TBall at ({int(transformed_x)}, {int(transformed_y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(frame, f"TBall at ({int(transformed_x)}, {int(transformed_y)}), ({int(ball_x)}, {int(ball_y)})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         # Display selected points
         for point in self.selected_points:

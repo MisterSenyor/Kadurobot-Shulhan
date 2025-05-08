@@ -27,7 +27,7 @@ class PlayersDetector:
         self.camera_index = camera_index
         self.group_threshold = initial_group_threshold
         self.min_area = 5
-        self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use CAP_DSHOW for faster loading on Windows
+        # self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use CAP_DSHOW for faster loading on Windows
 
         # HSV range for blue color
         self.lower_blue = np.array([43, 150, 255])  # Default lower bound
@@ -85,9 +85,10 @@ class PlayersDetector:
         for box in bounding_boxes:
             x1, y1, x2, y2 = box
             for line in self.lines:
-                if len(line) < 4:
+                if len(line) < 2:
                     continue
-                lx1, ly1, lx2, ly2 = line
+                lx1, ly1 = line[0]
+                lx2, ly2 = line[1]
                 if self.rect_intersects_line(x1, y1, x2, y2, lx1, ly1, lx2, ly2):
                     # Determine the bounds of the square
                     r = 15
@@ -104,15 +105,15 @@ class PlayersDetector:
                     distance_squared = (closest_x - mouse_coordinates[0]) ** 2 + (closest_y - mouse_coordinates[1]) ** 2
                     if distance_squared <= r ** 2:
                         mouse_coordinates = [100, 100]
-                        self.kick()
                     valid_boxes.append(box)
                     break
 
         # Draw lines and valid bounding boxes
         for line in self.lines:
-            if len(line) < 4:
+            if len(line) < 2:
                 continue
-            x1, y1, x2, y2 = line
+            x1, y1 = line[0]
+            x2, y2 = line[1]
             cv2.line(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Draw the line
 
         for contour in contours:
@@ -127,14 +128,6 @@ class PlayersDetector:
         cv2.imshow("Processed", processed_frame)
 
         return valid_boxes
-
-    def kick(self):
-        linear_stepper_handler = stepper_api.StepperHandler(settings.PORT)
-        linear_stepper_handler.set_stepper(settings.ANGULAR_STEPPER)
-        time.sleep(0.5)
-        linear_stepper_handler.move_to_deg(-60)
-        time.sleep(0.5)
-        linear_stepper_handler.move_to_deg(60)
 
     def rect_intersects_line(self, x1, y1, x2, y2, lx1, ly1, lx2, ly2):
         """
@@ -202,10 +195,10 @@ class PlayersDetector:
         """
         global mouse_coordinates
         if event == cv2.EVENT_RBUTTONDOWN:
-            if len(self.lines) > 0 and len(self.lines[-1]) < 4:
-                self.lines[-1].extend([x, y])  # Complete the line
+            if len(self.lines) > 0 and len(self.lines[-1]) < 2:
+                self.lines[-1].extend([[x, y]])  # Complete the line
             else:
-                self.lines.append([x, y])  # Start a new line
+                self.lines.append([[x, y]])  # Start a new line
             print(f"Line defined: {self.lines[-1]}")
         if event == cv2.EVENT_LBUTTONDOWN:
             mouse_coordinates = [x, y]
@@ -219,7 +212,7 @@ class PlayersDetector:
                 hsv_values = json.load(file)
                 self.lower_blue = np.array(hsv_values["lower_blue"], dtype=np.uint8)
                 self.upper_blue = np.array(hsv_values["upper_blue"], dtype=np.uint8)
-                print("Loaded HSV values from hsv_values.json")
+                print("Loaded HSV values from player_cv_parameters.json")
         except FileNotFoundError:
             print("No HSV values file found. Using default values.")
 

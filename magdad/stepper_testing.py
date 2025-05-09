@@ -3,7 +3,7 @@ import time
 import keyboard
 
 # Define the serial port and baud rate (ensure these match your Arduino sketch)
-serial_port = "COM9"  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
+serial_port = "COM8"  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
 baud_rate = 9600
 
 # Open serial connection

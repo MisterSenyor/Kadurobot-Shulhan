@@ -107,27 +107,27 @@ void stepToTargetArticle(int target, int &stepCounter) {
 }
 
 
-void loop() {
-  if (Serial.available() > 0) {
-    String command = Serial.readStringUntil('\n'); // Read command
-      if (command.equals("LIN")) {
-      stepPin = linearStepPin;
-      dirPin = linearDirPin;
-      Serial.println(command);
-    }
-    else if (command.equals("ANG")) {
-      stepPin = angularStepPin;
-      dirPin = angularDirPin;
-    }
-    else {
-      String command = Serial.readStringUntil('\n'); // Read number after s command
-      Serial.println(command);
-      int target = command.toInt(); // Convert the command to an integer
-      stepToTargetArticle(target, stepPin == linearStepPin ? linearStepCounter : angularStepCounter);
+// void loop() {
+//   if (Serial.available() > 0) {
+//     String command = Serial.readStringUntil('\n'); // Read command
+//       if (command.equals("LIN")) {
+//       stepPin = linearStepPin;
+//       dirPin = linearDirPin;
+//       Serial.println(command);
+//     }
+//     else if (command.equals("ANG")) {
+//       stepPin = angularStepPin;
+//       dirPin = angularDirPin;
+//     }
+//     else {
+//       String command = Serial.readStringUntil('\n'); // Read number after s command
+//       Serial.println(command);
+//       int target = command.toInt(); // Convert the command to an integer
+//       stepToTargetArticle(target, stepPin == linearStepPin ? linearStepCounter : angularStepCounter);
 
-    }
-  }
-}
+//     }
+//   }
+// }
 
 // void loop() {
 //   if (Serial.available() > 0) {
@@ -140,6 +140,6 @@ void loop() {
 //   }
 // }
 
-// void loop() {
-//  step();
-//  }
+void loop() {
+ step();
+ }

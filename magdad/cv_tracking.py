@@ -28,6 +28,7 @@ class BallTrackingSystem:
         self.recording = False
         self.video_writer = None
         self.frame_idx = 0
+        self.prev_moving_mms = None
         self.use_ipcam = ip_cam_url is not None
         self.linear_stepper_handler.select()
         if video:
@@ -35,7 +36,7 @@ class BallTrackingSystem:
                 json_data = json.load(f)
             self.source = json_data["path"]
         else:
-            self.source = 1
+            self.source = 2
         self.MIN_KICK_DIST = 100000
 
     def kick(self):
@@ -141,7 +142,9 @@ class BallTrackingSystem:
             if transformed_point.any():
                 transformed_x, transformed_y = transformed_point
                 moving_mms = transformed_y % ((settings.BOARD_WIDTH_MM - settings.PLAYER_WIDTH_MM) // 3)
-                self.linear_stepper_handler.move_to_mm(moving_mms)
+                if self.prev_moving_mms is None or abs(moving_mms - self.prev_moving_mms) > 10:
+                    self.linear_stepper_handler.move_to_mm(moving_mms)
+                    self.prev_moving_mms = moving_mms
                 # if ball is close enough - kick
                 # first calculate distance
         else:

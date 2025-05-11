@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 import json
 
+from numpy.testing.print_coercion_tables import print_coercion_table
+
 # import magdad.ball_cv as ball_cv, settings, magdad.stepper_api as stepper_api
 
 import ball_cv
@@ -27,17 +29,64 @@ class PlayersDetector:
         self.camera_index = camera_index
         self.group_threshold = initial_group_threshold
         self.min_area = 5
-        # self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use CAP_DSHOW for faster loading on Windows
+        self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use CAP_DSHOW for faster loading on Windows
 
         # HSV range for blue color
         self.lower_blue = np.array([43, 150, 255])  # Default lower bound
         self.upper_blue = np.array([54, 245, 255])  # Default upper bound
+        self.lower_red = np.array([0, 115, 200])  # Default lower bound
+        self.upper_red = np.array([20, 200, 255])
+        # self.lower_red1 = np.array([160, 100, 100])
+        # self.upper_red1 = np.array([180, 255, 255])
 
         # Lines defined by middle mouse clicks
         self.lines = []
 
         # Load preset values if available
         self.load_hsv_values()
+
+    def get_bounding_boxes(self, frame):
+        """
+        Detect and process shapes in the frame.
+        Groups nearby contours into single bounding boxes if within a defined distance.
+        @param frame: Current frame from the video feed.
+        @return: List of bounding boxes for detected shapes.
+        """
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv_frame, self.lower_blue, self.upper_blue)
+
+        # Find contours in the mask
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Group contours based on proximity
+        bounding_boxes = []
+        for contour in contours:
+            if cv2.contourArea(contour) < 40:  # Ignore small contours
+                continue
+
+            # Get bounding box for the current contour
+            x, y, w, h = cv2.boundingRect(contour)
+            box = (x, y, x + w, y + h)
+
+            # Check if this box can be merged with existing groups
+            merged = False
+            for i, group in enumerate(bounding_boxes):
+                gx1, gy1, gx2, gy2 = group
+                if abs(x - gx2) <= self.group_threshold and abs(y - gy2) <= self.group_threshold:
+                    # Merge boxes
+                    bounding_boxes[i] = (
+                        min(gx1, x), min(gy1, y),
+                        max(gx2, x + w), max(gy2, y + h)
+                    )
+                    merged = True
+                    break
+
+            if not merged:
+                bounding_boxes.append(box)
+
+        for (x1, y1, x2, y2) in bounding_boxes:
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255), 2)  # Yellow debug boxes
+        return bounding_boxes
 
     def find_shapes_on_lines(self, frame):
         global mouse_coordinates
@@ -82,6 +131,10 @@ class PlayersDetector:
 
         # Filter bounding boxes that intersect with any marked line
         valid_boxes = []
+
+        # for (x1, y1, x2, y2) in bounding_boxes:
+        #     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255), 2)  # Yellow debug boxes
+
         for box in bounding_boxes:
             x1, y1, x2, y2 = box
             for line in self.lines:
@@ -126,7 +179,7 @@ class PlayersDetector:
         cv2.imshow("Mask", mask)
         processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
         cv2.imshow("Processed", processed_frame)
-        
+
         return valid_boxes
     
     def rect_intersects_line(self, x1, y1, x2, y2, lx1, ly1, lx2, ly2):
@@ -258,13 +311,21 @@ class PlayersDetector:
         def update_upper_v(val):
             self.upper_blue[2] = val
 
-        cv2.createTrackbar("Lower H", "Processed", self.lower_blue[0], 179, update_lower_h)
-        cv2.createTrackbar("Upper H", "Processed", self.upper_blue[0], 179, update_upper_h)
-        cv2.createTrackbar("Lower S", "Processed", self.lower_blue[1], 255, update_lower_s)
-        cv2.createTrackbar("Upper S", "Processed", self.upper_blue[1], 255, update_upper_s)
-        cv2.createTrackbar("Lower V", "Processed", self.lower_blue[2], 255, update_lower_v)
-        cv2.createTrackbar("Upper V", "Processed", self.upper_blue[2], 255, update_upper_v)
-    
+        # cv2.createTrackbar("Lower H", "Processed", self.lower_blue[0], 179, update_lower_h)
+        # cv2.createTrackbar("Upper H", "Processed", self.upper_blue[0], 179, update_upper_h)
+        # cv2.createTrackbar("Lower S", "Processed", self.lower_blue[1], 255, update_lower_s)
+        # cv2.createTrackbar("Upper S", "Processed", self.upper_blue[1], 255, update_upper_s)
+        # cv2.createTrackbar("Lower V", "Processed", self.lower_blue[2], 255, update_lower_v)
+        # cv2.createTrackbar("Upper V", "Processed", self.upper_blue[2], 255, update_upper_v)
+
+        # Create trackbars for adjusting red color values
+        cv2.createTrackbar("Lower Red H", "Processed", self.lower_red[0], 179, update_lower_h)
+        cv2.createTrackbar("Upper Red H", "Processed", self.upper_red[0], 179, update_upper_h)
+        cv2.createTrackbar("Lower Red S", "Processed", self.lower_red[1], 255, update_lower_s)
+        cv2.createTrackbar("Upper Red S", "Processed", self.upper_red[1], 255, update_upper_s)
+        cv2.createTrackbar("Lower Red V", "Processed", self.lower_red[2], 255, update_lower_v)
+        cv2.createTrackbar("Upper Red V", "Processed", self.upper_red[2], 255, update_upper_v)
+
         while True:
             ret, frame = self.cap.read()
             self.ball_handler.run_frame(frame.copy())
@@ -277,6 +338,7 @@ class PlayersDetector:
 
             # Detect shapes intersecting lines
             coords = self.find_shapes_on_lines(frame)
+            coords = self.get_bounding_boxes(frame)
 
             # Display frames
             cv2.imshow("Original", frame)

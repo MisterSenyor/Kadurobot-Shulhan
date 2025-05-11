@@ -40,16 +40,20 @@ class BallTrackingSystem:
         self.MIN_KICK_DIST = 100000
 
     def kick(self):
-        TIME_DELAY = 0.1
-        self.angular_stepper_handler.select()
-        time.sleep(TIME_DELAY)
-        self.angular_stepper_handler.move_to_deg(-100)
-        time.sleep(TIME_DELAY)
-        self.angular_stepper_handler.move_to_deg(100)
-        time.sleep(TIME_DELAY)
-        self.angular_stepper_handler.move_to_deg(0)
-        time.sleep(TIME_DELAY)
-        self.linear_stepper_handler.select()
+        # TIME_DELAY = 0.1
+        # self.angular_stepper_handler.select()
+        # time.sleep(TIME_DELAY)
+        # self.angular_stepper_handler.move_to_deg(-100)
+        # time.sleep(TIME_DELAY)
+        # self.angular_stepper_handler.move_to_deg(100)
+        # time.sleep(TIME_DELAY)
+        # self.angular_stepper_handler.move_to_deg(0)
+        # time.sleep(TIME_DELAY)
+        # self.linear_stepper_handler.select()
+        # coordinates = self.ball_handler.find_ball_location(frame)
+        pass
+
+
 
     def spin360(self):
         self.angular_stepper_handler.select()
@@ -98,7 +102,8 @@ class BallTrackingSystem:
 
     def fetch_webcam_frame(self):
         if not hasattr(self, "webcam_cap"):
-            self.webcam_cap = cv2.VideoCapture(self.source, cv2.CAP_DSHOW)
+            # self.webcam_cap = cv2.VideoCapture(self.source, cv2.CAP_DSHOW)
+            self.webcam_cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
         ret, frame = self.webcam_cap.read()
         return frame if ret else None
 
@@ -107,6 +112,7 @@ class BallTrackingSystem:
             frame = self.fetch_ipcam_frame() if self.use_ipcam else self.fetch_webcam_frame()
             if frame is not None and frame.shape[0] > 0:
                 break
+            print("frame is still None")
             time.sleep(0.5)
 
         self.ball_handler.create_quadrilateral_mask(frame)
@@ -146,7 +152,11 @@ class BallTrackingSystem:
                     self.linear_stepper_handler.move_to_mm(moving_mms)
                     self.prev_moving_mms = moving_mms
                 # if ball is close enough - kick
-                # first calculate distance
+                # first calculate distance```````````````
+                distance = self.calculate_distance_ball_to_line((transformed_x, transformed_y))
+                if distance < self.MIN_KICK_DIST:
+                    self.kick()
+                    print("Kicking...")
         else:
             closest = self.closest_endpoint((pred_x, pred_y))
             self.draw_x(frame, closest, size=15, color=(255, 0, 0), thickness=2)
@@ -310,6 +320,7 @@ class BallTrackingSystem:
         num = abs((y2 - y1) * ball_x - (x2 - x1) * ball_y + x2 * y1 - y2 * x1)
         denom = np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2)
         return num / denom ** 2
+
 
 
 if __name__ == "__main__":

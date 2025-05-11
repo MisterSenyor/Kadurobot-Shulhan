@@ -359,5 +359,5 @@ class BallDetector:
 
 
 if __name__ == "__main__":
-    detector = BallDetector(camera_index=1, initial_ball_radius=20)
+    detector = BallDetector(camera_index=2, initial_ball_radius=20)
     detector.run()

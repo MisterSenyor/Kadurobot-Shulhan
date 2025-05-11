@@ -22,7 +22,7 @@ class BallTrackingSystem:
         self.ball_handler = ball_cv.BallDetector()
         # self.player_handler = player_cv.PlayersDetector()
         self.steppers = self.initialize_steppers()
-        self.linear_stepper_handler = self.steppers["linear"][0]
+        self.linear_stepper_handler = self.steppers["linear"][1]
         self.angular_stepper_handler = self.steppers["angular"][0]
         self.load_config()
         self.recording = False

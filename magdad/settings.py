@@ -14,6 +14,10 @@ DEG_PER_STEP = 360 / 400
 MAX_TARGET = 540
 PLAYER_WIDTH_MM = 20
 
+def MM_TO_STEPS(mm: int):
+    # return round((mm + 0.2757) / 0.2148)
+    return round((mm) / 0.2148)
+
 MAX_VELOCITY = 100000
 VELOCITY = 8000
 

@@ -17,11 +17,16 @@ class StepperHandler:
 
     def move_to_mm(self, mm):
         print(f"MOVING TO {mm}-----------------")
-        self.arduino.write(f"s\n{round(mm / MM_PER_STEP)}\n".encode())
+        if 0 <= round(mm / MM_PER_STEP) <= MAX_TARGET:
+            self.arduino.write(f"{self.stepper_type} {round(mm / MM_PER_STEP)}\n".encode())
+
+    def move_to_steps(self, mm):
+        print(f"MOVING TO {mm}-----------------")
+        self.arduino.write(f"{self.stepper_type} {mm}\n".encode())
         
     def move_to_deg(self, deg):
         # print(f"MOVING TO {deg}-----------------")
-        self.arduino.write(f"s\n{round(deg / DEG_PER_STEP)}\n".encode())
+        self.arduino.write(f"{self.stepper_type} {round(deg / DEG_PER_STEP)}\n".encode())
     
     def set_stepper(self, motor):
         self.arduino.write(motor.encode())

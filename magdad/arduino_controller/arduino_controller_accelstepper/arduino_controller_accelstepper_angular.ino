@@ -38,7 +38,7 @@ void loop() {
     String input = Serial.readStringUntil('\n');
     input.trim();
 
-    if (input.startsWith("ANG")) {
+    if (input.startsWith("MOT")) {
       int motorIndex = input.charAt(3) - '0';
       if (motorIndex >= 0 && motorIndex < 3) {
         int spaceIndex = input.indexOf(' ');

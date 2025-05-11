@@ -90,7 +90,7 @@ class PlayersDetector:
                 lx1, ly1 = line[0]
                 lx2, ly2 = line[1]
                 if self.rect_intersects_line(x1, y1, x2, y2, lx1, ly1, lx2, ly2):
-                    # Determine the bounds of the square
+                        # Determine the bounds of the square
                     r = 15
                     square_min_x = min(x1, x2)
                     square_max_x = max(x1, x2)
@@ -126,9 +126,9 @@ class PlayersDetector:
         cv2.imshow("Mask", mask)
         processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
         cv2.imshow("Processed", processed_frame)
-
+        
         return valid_boxes
-
+    
     def rect_intersects_line(self, x1, y1, x2, y2, lx1, ly1, lx2, ly2):
         """
         Check if a rectangle intersects with a line.
@@ -156,13 +156,13 @@ class PlayersDetector:
         @param x3, y3, x4, y4: Endpoints of the second line.
         @return: True if the lines intersect, False otherwise.
         """
-
         def ccw(a, b, c):
             return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
 
         p1, p2 = (x1, y1), (x2, y2)
         p3, p4 = (x3, y3), (x4, y4)
         return ccw(p1, p3, p4) != ccw(p2, p3, p4) and ccw(p1, p2, p3) != ccw(p1, p2, p4)
+
 
     @staticmethod
     def is_point_on_line(point, line, tolerance=5):
@@ -264,7 +264,7 @@ class PlayersDetector:
         cv2.createTrackbar("Upper S", "Processed", self.upper_blue[1], 255, update_upper_s)
         cv2.createTrackbar("Lower V", "Processed", self.lower_blue[2], 255, update_lower_v)
         cv2.createTrackbar("Upper V", "Processed", self.upper_blue[2], 255, update_upper_v)
-
+    
         while True:
             ret, frame = self.cap.read()
             self.ball_handler.run_frame(frame.copy())
@@ -288,7 +288,6 @@ class PlayersDetector:
 
         self.cap.release()
         cv2.destroyAllWindows()
-
 
 if __name__ == "__main__":
     detector = PlayersDetector(camera_index=1, initial_group_threshold=20)

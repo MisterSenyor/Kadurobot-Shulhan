@@ -63,8 +63,8 @@ class BallTrackingSystem:
         serials = [serial.Serial(port, baudrate=settings.BAUD_RATE) for port in settings.SERIAL_PORTS]
         if len(serials) == 2:
             steppers = {
-                "linear": [stepper_api.StepperHandler(serials[0], stepper_type="LIN") for _ in range(3)],
-                "angular": [stepper_api.StepperHandler(serials[1], stepper_type="ANG") for _ in range(3)]
+                "linear": [stepper_api.StepperHandler(serials[0], stepper_type=f"MOT{i}") for i in range(3)],
+                "angular": [stepper_api.StepperHandler(serials[1], stepper_type=f"MOT{i}") for i in range(3)]
             }
         else:
             steppers = {
@@ -73,6 +73,8 @@ class BallTrackingSystem:
                 "angular": [stepper_api.StepperHandler(arduino_serial, stepper_type=settings.ANGULAR_STEPPER) for
                             arduino_serial in serials],
             }
+        for arduino in serials:
+            arduino.write("RESET\n".encode())
         return steppers
 
     def load_config(self):
@@ -317,5 +319,5 @@ if __name__ == "__main__":
 
     # system = BallTrackingSystem(json_path, ip_cam_url=ip_cam_url)
     system = BallTrackingSystem(json_path)
-    # system.run_tracking_live()
-    system.demo_all_rows_side_to_side()
+    system.run_tracking_live()
+    # system.demo_all_rows_side_to_side()

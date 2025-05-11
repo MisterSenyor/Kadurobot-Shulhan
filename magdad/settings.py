@@ -1,7 +1,6 @@
 BOARD_WIDTH_MM = 340
 BOARD_HEIGHT_MM = 590
 HEIGHT_PADDING_MM = 25 # 25 including both directions
-PLAYER_WIDTH_MM = 20
 """
 Ran the following code:
 for _ in range(100):
@@ -10,8 +9,10 @@ and got 19.5 mm movement for steps_per_second = 100
 """
 STEPS_PER_SECOND = 10
 CM_PER_STEPS = 7.9 / 400
-MM_PER_STEP = 79 / 400
+MM_PER_STEP = 0.2019
 DEG_PER_STEP = 360 / 400
+MAX_TARGET = 540
+PLAYER_WIDTH_MM = 20
 
 MAX_VELOCITY = 100000
 VELOCITY = 8000
@@ -33,4 +34,4 @@ MOVING_THRESHOLD = 8
 
 BAUD_RATE = 9600
 
-SERIAL_PORTS = ["COM8", "COM9"]
+SERIAL_PORTS = ["COM3", "COM4"]

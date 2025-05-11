@@ -64,7 +64,7 @@ class BallTrackingSystem:
         self.linear_stepper_handler.select()
 
     def initialize_steppers(self):
-        serials = [serial.Serial(port, baudrate=settings.BAUD_RATE) for port in settings.SERIAL_PORTS]
+        serials = [serial.Serial(port, baudrate=settings.BAUD_RATE, write_timeout=1) for port in settings.SERIAL_PORTS]
         if len(serials) == 2:
             steppers = {
                 "linear": [stepper_api.StepperHandler(serials[0], stepper_type=f"MOT{i}") for i in range(3)],

@@ -10,6 +10,7 @@ class StepperHandler:
         self.direction = DIR_UP
         self.stepper_type = stepper_type
         time.sleep(2)  # Wait for the connection to establish
+        print(f"arduino serial: {self.direction.encode()}")
         self.arduino.write(self.direction.encode())
 
     def select(self):

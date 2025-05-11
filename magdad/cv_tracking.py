@@ -28,6 +28,7 @@ class BallTrackingSystem:
         self.recording = False
         self.video_writer = None
         self.frame_idx = 0
+        self.prev_moving_mms = None
         self.use_ipcam = ip_cam_url is not None
         self.linear_stepper_handler.select()
         if video:
@@ -35,7 +36,7 @@ class BallTrackingSystem:
                 json_data = json.load(f)
             self.source = json_data["path"]
         else:
-            self.source = 1
+            self.source = 2
         self.MIN_KICK_DIST = 100000
 
     def kick(self):
@@ -62,10 +63,8 @@ class BallTrackingSystem:
         serials = [serial.Serial(port, baudrate=settings.BAUD_RATE) for port in settings.SERIAL_PORTS]
         if len(serials) == 2:
             steppers = {
-                "linear": [stepper_api.StepperHandler(serials[0], stepper_type=stepper_types) for stepper_types in
-                           settings.TRIPLE_STEPPER_TYPES],
-                "angular": [stepper_api.StepperHandler(serials[0], stepper_type=stepper_types) for stepper_types in
-                            settings.TRIPLE_STEPPER_TYPES],
+                "linear": [stepper_api.StepperHandler(serials[0], stepper_type="LIN") for _ in range(3)],
+                "angular": [stepper_api.StepperHandler(serials[1], stepper_type="ANG") for _ in range(3)]
             }
         else:
             steppers = {
@@ -141,7 +140,9 @@ class BallTrackingSystem:
             if transformed_point.any():
                 transformed_x, transformed_y = transformed_point
                 moving_mms = transformed_y % ((settings.BOARD_WIDTH_MM - settings.PLAYER_WIDTH_MM) // 3)
-                self.linear_stepper_handler.move_to_mm(moving_mms)
+                if self.prev_moving_mms is None or abs(moving_mms - self.prev_moving_mms) > 10:
+                    self.linear_stepper_handler.move_to_mm(moving_mms)
+                    self.prev_moving_mms = moving_mms
                 # if ball is close enough - kick
                 # first calculate distance
         else:
@@ -253,6 +254,36 @@ class BallTrackingSystem:
             self.video_writer.release()
         cv2.destroyAllWindows()
 
+    def demo_all_rows_side_to_side(self, sweep_range_mm=100, step_mm=10, delay=0.05):
+        """
+        Move all three rows side to side with coordinated kicks at each end of the sweep.
+        """
+        print("⚽ Starting demo: sweeping all rows side to side with kicks...")
+
+        linear_steppers = self.steppers["linear"]
+        angular_steppers = self.steppers["angular"]
+
+        while True:
+            time.sleep(0.1)
+            for direction in [1, -1]:  # 1 = right, -1 = left
+                for offset in range(0, sweep_range_mm + 1, step_mm):
+                    target_mm = offset if direction == 1 else sweep_range_mm - offset
+                    for linear_stepper in linear_steppers:
+                        linear_stepper.select()
+                        linear_stepper.move_to_mm(target_mm)
+                    time.sleep(delay)
+
+                # After reaching one side, kick from all rows
+                for angular_stepper in angular_steppers:
+                    angular_stepper.select()
+                    angular_stepper.move_to_deg(-90)
+                    time.sleep(0.1)
+                    angular_stepper.move_to_deg(90)
+                    time.sleep(0.1)
+                    angular_stepper.move_to_deg(0)
+
+        # print("✅ Demo finished.")
+
     def start_recording(self, frame):
         self.recording = True
         h, w = frame.shape[:2]
@@ -286,4 +317,5 @@ if __name__ == "__main__":
 
     # system = BallTrackingSystem(json_path, ip_cam_url=ip_cam_url)
     system = BallTrackingSystem(json_path)
-    system.run_tracking_live()
+    # system.run_tracking_live()
+    system.demo_all_rows_side_to_side()

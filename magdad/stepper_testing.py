@@ -3,7 +3,7 @@ import time
 import keyboard
 
 # Define the serial port and baud rate (ensure these match your Arduino sketch)
-serial_port = "COM9"  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
+serial_port = "COM4"  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
 baud_rate = 9600
 
 # Open serial connection
@@ -28,10 +28,10 @@ while True:
             # arduino.write(b"DOWN\n")
         elif keyboard.is_pressed("z"):
             # arduino.write(b"s\n100\n")  # Send the "step" command
-            arduino.write(b"s\n400\n")  # Send the "step" command
+            arduino.write(b"40\n")  # Send the "step" command
         elif keyboard.is_pressed("x"):
             # arduino.write(b"s\n0\n")  # Send the "step" command
-            arduino.write(b"s\n0\n")  # Send the "step" command
+            arduino.write(b"0\n")  # Send the "step" command
         elif keyboard.is_pressed("q"):
             quit()
         time.sleep(0.05)  # Adjust delay if needed

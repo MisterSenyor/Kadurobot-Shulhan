@@ -124,11 +124,13 @@ class BallTrackingSystem:
                     angular_stepper.move_to_deg(angle)
                     time.sleep(self.ANG_DELAY)
                 angular_stepper.move_to_deg(0)
+                # angular_stepper.set_steps(0)
             prediction = self.system_logic.predict_intersection(line, row)
             if prediction is None:
                 continue
             if not self.system_logic.is_point_on_segment(row, prediction):
-                prediction = self.system_logic.closest_endpoint(prediction, row)
+                # prediction = self.system_logic.closest_endpoint(prediction, row)
+                continue
             pred_x, pred_y = prediction
             cv2.circle(frame, (int(pred_x), int(pred_y)), 10, (0, 0, 255), -1)
             linear_stepper = self.steppers["linear"][i]

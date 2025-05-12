@@ -4,8 +4,8 @@ import keyboard
 from stepper_api import StepperHandler
 
 # Define the serial port and baud rate (ensure these match your Arduino sketch)
-serial_port1 = "COM9"  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
-serial_port2 = "COM8"  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
+serial_port1 = "COM4"  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
+serial_port2 = "COM6"  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
 baud_rate = 9600
 
 # Open serial connection
@@ -53,17 +53,22 @@ while True:
             # arduino.write(b"s\n0\n")  # Send the "step" command
             current_lin.move_to_steps(0)
             current_ang.move_to_steps(0)
-            time.sleep(0.5)
+            time.sleep(0.05)
         elif keyboard.is_pressed("s"):
             # arduino.write(b"s\n100\n")  # Send the "step" command
             # current_lin.move_to_steps(c)
             # time.sleep(0.5)
             # current_ang.move_to_steps(c)
-            # c += 90
             # time.sleep(0.5)
-            current_lin.move_to_steps(1000)
-            current_ang.move_to_steps(1000)
-            time.sleep(0.5)
+            current_lin.move_to_steps(c)
+            c += 90
+            # current_ang.move_to_steps(1000)
+            time.sleep(0.05)
+        elif keyboard.is_pressed("d"):
+            current_lin.stop()
+            time.sleep(0.05)
+        elif keyboard.is_pressed("f"):
+            current_lin.set_mm(0)
 
         elif keyboard.is_pressed("q"):
             quit()
@@ -72,4 +77,4 @@ while True:
         print("Stopping...")
         break
         
-arduino.close()
+arduino1.close()

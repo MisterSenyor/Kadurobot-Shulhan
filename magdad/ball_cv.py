@@ -292,10 +292,6 @@ class BallDetector:
             return None
         elif key == ord("s"):  # Save HSV values if 's' is pressed
             self.save_hsv_values()
-        elif key == ord("f"):  # Fullscreen toggle for all windows
-            cv2.setWindowProperty("Ball-Original", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-            cv2.setWindowProperty("Ball-Processed", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-            # cv2.setWindowProperty("Ball-Mask", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
         if transformed_x is None and transformed_y is None:
             # Return the transformed coordinates
@@ -347,10 +343,6 @@ class BallDetector:
                 break
             elif key == ord("s"):  # Save HSV values if 's' is pressed
                 self.save_hsv_values()
-            elif key == ord("f"):  # Fullscreen toggle for all windows
-                cv2.setWindowProperty("Ball-Original", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-                cv2.setWindowProperty("Ball-Processed", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-                # cv2.setWindowProperty("Ball-Mask", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
         # Release resources
         self.cap.release()

@@ -11,8 +11,8 @@
 #define ANG2_DIR_PIN 4
 
 // === Motor Settings ===
-#define MAX_SPEED 3000
-#define ACCELERATION 50000
+#define MAX_SPEED 6000
+#define ACCELERATION 40000
 #define MAX_TARGET 540
 #define MIN_STEPS 80
 
@@ -66,7 +66,7 @@ void loop() {
       reset_motors();
     }
     else if (input.startsWith("STOP")) {
-      int motorIndex = input.charAt(3) - '0';
+      int motorIndex = input.charAt(4) - '0';
       if (motorIndex >= 0 && motorIndex < 3) {
         AccelStepper& motor = angularMotors[motorIndex];
         motor.stop();

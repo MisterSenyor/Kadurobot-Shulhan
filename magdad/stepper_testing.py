@@ -59,14 +59,16 @@ while True:
             # current_lin.move_to_steps(c)
             # time.sleep(0.5)
             # current_ang.move_to_steps(c)
-            # c += 90
             # time.sleep(0.5)
-            current_lin.move_to_steps(1000)
-            current_ang.move_to_steps(1000)
+            current_lin.move_to_steps(c)
+            c += 90
+            # current_ang.move_to_steps(1000)
             time.sleep(0.05)
         elif keyboard.is_pressed("d"):
             current_lin.stop()
             time.sleep(0.05)
+        elif keyboard.is_pressed("f"):
+            current_lin.set_mm(0)
 
         elif keyboard.is_pressed("q"):
             quit()

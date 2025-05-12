@@ -17,12 +17,17 @@ class StepperHandler:
         self.arduino.write(f's{self.stepper_type}'.encode())
 
     def stop(self):
-        self.arduino.write("STOP\n".encode())
+        self.arduino.write(f"STOP{self.stepper_type[-1]}\n".encode())
     
     def set_mm(self, mm):
         print(f"SETTING TO {mm}, {MM_TO_STEPS(mm)}-----------------")
         if 0 <= MM_TO_STEPS(mm) <= MAX_TARGET:
             self.arduino.write(f"SET{self.stepper_type[-1]} {MM_TO_STEPS(mm)}\n".encode())
+
+    def set_steps(self, steps):
+        print(f"SETTING TO {steps}, {MM_TO_STEPS(steps)}-----------------")
+        if 0 <= MM_TO_STEPS(steps) <= MAX_TARGET:
+            self.arduino.write(f"SET{self.stepper_type[-1]} {MM_TO_STEPS(steps)}\n".encode())
     
     def move_to_mm(self, mm):
         print(f"MOVING TO {mm}, {MM_TO_STEPS(mm)}-----------------")

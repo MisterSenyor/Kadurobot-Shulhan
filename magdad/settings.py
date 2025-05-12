@@ -16,7 +16,8 @@ PLAYER_WIDTH_MM = 20
 
 def MM_TO_STEPS(mm: int):
     # return round((mm + 0.2757) / 0.2148)
-    return round((mm) / 0.2148)
+    # return round((mm) / 0.2148)
+    return round((mm) / 0.190)
 
 MAX_VELOCITY = 100000
 VELOCITY = 8000
@@ -40,6 +41,6 @@ BAUD_RATE = 9600
 
 
 LIORAH_PORTS = ["COM8", "COM9"]
-MINCHA_PORTS = ["COM3", "COM4"]
-SERIAL_PORTS = MINCHA_PORTS
+MINHA_PORTS = ["COM4", "COM6"]
+SERIAL_PORTS = MINHA_PORTS
 

@@ -37,7 +37,7 @@ class BallTrackingSystem:
             self.source = json_data["path"]
         else:
             self.source = 2
-        self.MIN_KICK_DIST = 10
+        self.MIN_KICK_DIST = 100000
 
     def kick(self):
         # TIME_DELAY = 0.1
@@ -64,7 +64,7 @@ class BallTrackingSystem:
         self.linear_stepper_handler.select()
 
     def initialize_steppers(self):
-        serials = [serial.Serial(port, baudrate=settings.BAUD_RATE) for port in settings.SERIAL_PORTS]
+        serials = [serial.Serial(port, baudrate=settings.BAUD_RATE, write_timeout=1) for port in settings.SERIAL_PORTS]
         if len(serials) == 2:
             steppers = {
                 "linear": [stepper_api.StepperHandler(serials[0], stepper_type=f"MOT{i}") for i in range(3)],
@@ -89,6 +89,11 @@ class BallTrackingSystem:
         self.player_row_end = data["rows"][0][1]
         # self.player_handler.lines = data["rows"]
         self.ball_handler.selected_points = self.table_points
+        self.ball_handler.calculate_perspective_transform()
+        self.player_row_start_mm = self.ball_handler.apply_perspective_transform(self.player_row_start[0], self.player_row_start[1])
+        self.player_row_end_mm = self.ball_handler.apply_perspective_transform(self.player_row_end[0], self.player_row_end[1])
+        self.player_row_len = round(np.sqrt((self.player_row_end[0] - self.player_row_start[0]) ** 2 + (self.player_row_end[1] - self.player_row_start[1]) ** 2))
+        print(f"{self.player_row_len=}")
 
     def fetch_ipcam_frame(self):
         try:
@@ -102,8 +107,7 @@ class BallTrackingSystem:
 
     def fetch_webcam_frame(self):
         if not hasattr(self, "webcam_cap"):
-            # self.webcam_cap = cv2.VideoCapture(self.source, cv2.CAP_DSHOW)
-            self.webcam_cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+            self.webcam_cap = cv2.VideoCapture(self.source, cv2.CAP_DSHOW)
         ret, frame = self.webcam_cap.read()
         return frame if ret else None
 
@@ -115,6 +119,7 @@ class BallTrackingSystem:
             print("frame is still None")
             time.sleep(0.5)
 
+        cv2.namedWindow("Ball Tracking", cv2.WINDOW_NORMAL)
         self.ball_handler.create_quadrilateral_mask(frame)
         self.ball_handler.calculate_perspective_transform()
 
@@ -147,7 +152,8 @@ class BallTrackingSystem:
             # if key == ord("g")
             if transformed_point.any():
                 transformed_x, transformed_y = transformed_point
-                moving_mms = transformed_y % ((settings.BOARD_WIDTH_MM - settings.PLAYER_WIDTH_MM) // 3)
+                transformed_y = min(self.player_row_len, max(0, transformed_y))
+                moving_mms = transformed_y % (self.player_row_len // 3)
                 if self.prev_moving_mms is None or abs(moving_mms - self.prev_moving_mms) > 10:
                     self.linear_stepper_handler.move_to_mm(moving_mms)
                     self.prev_moving_mms = moving_mms
@@ -220,12 +226,18 @@ class BallTrackingSystem:
         cv2.line(frame, (x - size, y - size), (x + size, y + size), color, thickness)
         cv2.line(frame, (x - size, y + size), (x + size, y - size), color, thickness)
 
+    def on_click(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            print(f"CLICK AT {(x, y)} - {self.ball_handler.apply_perspective_transform(x,y)}")
+
+
     def run_tracking_live(self):
         self.initialize_perspective()
         self.ball_handler.create_windows()
         print("🎮 Press 'r' to record, 's' to stop, 'q' to quit.")
         while True:
             frame = self.fetch_ipcam_frame() if self.use_ipcam else self.fetch_webcam_frame()
+            cv2.setMouseCallback("Ball Tracking", self.on_click, frame)
             if frame is None or frame.shape[0] <= 1 or frame.shape[1] <= 1:
                 continue
 
@@ -238,10 +250,17 @@ class BallTrackingSystem:
                 self.start_recording(frame)
             elif key == ord("s") and self.recording:
                 self.stop_recording()
-            elif key == ord("g"):
-                label = "Recording..." if self.recording else f"Live {self.tracker.get_velocity()}"
-                cv2.putText(frame, label, (10, 400), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                            (0, 0, 255) if self.recording else (0, 255, 0), 2)
+            # elif key == ord("g"):
+            #     label = "Recording..." if self.recording else f"Live {self.tracker.get_velocity()}"
+            #     cv2.putText(frame, label, (10, 400), cv2.FONT_HERSHEY_SIMPLEX, 1,
+            #                 (0, 0, 255) if self.recording else (0, 255, 0), 2)
+            elif key == ord("z"): #for ZERO!
+                self.linear_stepper_handler.move_to_mm(0)
+            elif key == ord("f"): #for FIX!
+                self.linear_stepper_handler.move_to_steps(-100)
+            elif key == ord("g"): # for GOTEM!
+                # self.linear_stepper_handler.stop()
+                self.linear_stepper_handler.set_steps(0)
             # elif key == ord("k"):
             #     self.kick()
             #     print("Kicking...")
@@ -254,7 +273,7 @@ class BallTrackingSystem:
             if self.recording and self.video_writer:
                 self.video_writer.write(frame)
 
-            cv2.namedWindow("Ball Tracking", cv2.WINDOW_NORMAL)
+
             cv2.imshow("Ball Tracking", frame)
             if self.pausing:
                 while True:

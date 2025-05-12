@@ -143,6 +143,7 @@ class BallTrackingSystem:
                 self.current_players_positions[i] = linear_movement
                 linear_stepper.move_to_mm(settings.BOARD_WIDTH_MM / 2)
                 self.current_players_positions[i] = settings.BOARD_WIDTH_MM / 2
+                self.steppers["linear"][i].set_mm(self.current_players_positions[i])
 
     @staticmethod
     def draw_x(frame, center, size=10, color=(0, 0, 255), thickness=2):
@@ -238,6 +239,9 @@ class BallTrackingSystem:
             self.video_writer.release()
             self.video_writer = None
             print("⏹️ Stopped recording.")
+
+
+
 
 
 if __name__ == "__main__":

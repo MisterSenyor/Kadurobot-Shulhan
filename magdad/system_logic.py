@@ -17,7 +17,7 @@ class SystemLogic:
         self.goalkeeper_row = goalkeeper_row
         self.player_rows = [self.aggressive_row, self.middle_row, self.goalkeeper_row]
         self.MIN_KICK_DIST = 0.1
-        self.MIN_MOVE_DIST = 0
+        self.MIN_MOVE_DIST = 0.1
         self.THIRD = settings.BOARD_WIDTH_MM / 3
 
     def determine_player_row(self, ball_coordinates):
@@ -102,7 +102,9 @@ class SystemLogic:
 
         moving_mms = ball_y % ((settings.BOARD_WIDTH_MM - settings.PLAYER_WIDTH_MM) // 3)
         if abs(moving_mms - player_current_position) < self.MIN_MOVE_DIST:
+            print(f"moving_mms: {moving_mms}, player_current_position: {player_current_position}")
             return None
+        print(f"moving_mms: {moving_mms}, player_current_position: {player_current_position}")
         return moving_mms
 
     def get_angular_movement(self, ball_coordinates, player_row):
@@ -110,7 +112,7 @@ class SystemLogic:
         distance = self.calculate_distance_ball_to_line(player_row, (ball_x, ball_y))
         if distance > self.MIN_KICK_DIST:
             return [0]
-        return [-100, 100]
+        return [720]
 
 # logic part
 

@@ -15,7 +15,6 @@ class StepperHandler:
 
     def select(self):
         self.arduino.write(f's{self.stepper_type}'.encode())
-
     def stop(self):
         self.arduino.write(f"STOP{self.stepper_type[-1]}\n".encode())
     
@@ -39,7 +38,7 @@ class StepperHandler:
         self.arduino.write(f"{self.stepper_type} {steps}\n".encode())
         
     def move_to_deg(self, deg):
-        # print(f"MOVING TO {deg}-----------------")
+        print(f"MOVING TO {deg}-----------------")
         self.arduino.write(f"{self.stepper_type} {round(deg / DEG_PER_STEP)}\n".encode())
     
     def set_stepper(self, motor):

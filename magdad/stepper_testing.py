@@ -2,10 +2,11 @@ import serial
 import time
 import keyboard
 from stepper_api import StepperHandler
+import settings
 
 # Define the serial port and baud rate (ensure these match your Arduino sketch)
-serial_port1 = "COM4"  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
-serial_port2 = "COM6"  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
+serial_port1 = settings.SERIAL_PORTS[0]  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
+serial_port2 = settings.SERIAL_PORTS[1]  # Replace with the correct port (e.g., "/dev/ttyUSB0" on Linux)
 baud_rate = 9600
 
 # Open serial connection
@@ -62,6 +63,7 @@ while True:
             # time.sleep(0.5)
             current_lin.move_to_steps(c)
             c += 90
+            c = c % 360
             # current_ang.move_to_steps(1000)
             time.sleep(0.05)
         elif keyboard.is_pressed("d"):
@@ -76,5 +78,5 @@ while True:
     except KeyboardInterrupt:
         print("Stopping...")
         break
-        
+
 arduino1.close()

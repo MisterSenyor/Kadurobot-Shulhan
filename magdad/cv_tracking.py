@@ -45,7 +45,7 @@ class BallTrackingSystem:
             self.source = json_data["path"]
         else:
             self.source = 2
-        self.ANG_DELAY = 0.05
+        self.ANG_DELAY = 0.1
 
     @staticmethod
     def initialize_steppers():
@@ -104,12 +104,9 @@ class BallTrackingSystem:
         ret, frame = self.webcam_cap.read()
         return frame if ret else None
 
-    def manage_game(self, frame, coordinates):
-        if coordinates is None or coordinates[0] is None or coordinates[1] is None:
-            return
-
+    def manage_game(self, frame):
         coordinates = self.ball_handler.find_ball_location(frame)[:2]
-        if coordinates is None:
+        if coordinates is None or coordinates[0] is None or coordinates[1] is None:
             return
         self.tracker.update_position(coordinates[0], coordinates[1])
 
@@ -122,7 +119,7 @@ class BallTrackingSystem:
             angular_stepper = self.steppers["angular"][i]
             angular_movement = self.system_logic.get_angular_movement(coordinates, row)
             if angular_movement is not None:
-                angular_stepper.select()
+                # angular_stepper.select()
                 for angle in angular_movement:
                     angular_stepper.move_to_deg(angle)
                     time.sleep(self.ANG_DELAY)
@@ -140,9 +137,12 @@ class BallTrackingSystem:
             linear_movement = self.system_logic.get_linear_movement(transformed_prediction,
                                                                     self.current_players_positions[i])
             if linear_movement is not None:
-                linear_stepper.select()
+                # linear_stepper.select()
                 linear_stepper.move_to_mm(linear_movement)
+                time.sleep(self.ANG_DELAY)
                 self.current_players_positions[i] = linear_movement
+                linear_stepper.move_to_mm(settings.BOARD_WIDTH_MM / 2)
+                self.current_players_positions[i] = settings.BOARD_WIDTH_MM / 2
 
     @staticmethod
     def draw_x(frame, center, size=10, color=(0, 0, 255), thickness=2):
@@ -172,15 +172,12 @@ class BallTrackingSystem:
                 label = "Recording..." if self.recording else f"Live {self.tracker.get_velocity()}"
                 cv2.putText(frame, label, (10, 400), cv2.FONT_HERSHEY_SIMPLEX, 1,
                             (0, 0, 255) if self.recording else (0, 255, 0), 2)
-            # elif key == ord("k"):
-            #     self.kick()
-            #     print("Kicking...")
 
             coordinates = self.ball_handler.run_frame(frame)
             # player_boxes = self.player_handler.find_shapes_on_lines(frame)
             for row in self.player_rows:
                 cv2.line(frame, row[0], row[1], (0, 255, 0), 2)
-            self.manage_game(frame, coordinates)
+            self.manage_game(frame)
 
             if self.recording and self.video_writer:
                 self.video_writer.write(frame)
@@ -252,169 +249,3 @@ if __name__ == "__main__":
     system = BallTrackingSystem(json_path)
     system.run_tracking_live()
     # system.demo_all_rows_side_to_side()
-
-'''
-for later
-
-
-
-
-
-    def kick(self):
-        # TIME_DELAY = 0.1
-        # self.angular_stepper_handler.select()
-        # time.sleep(TIME_DELAY)
-        # self.angular_stepper_handler.move_to_deg(-100)
-        # time.sleep(TIME_DELAY)
-        # self.angular_stepper_handler.move_to_deg(100)
-        # time.sleep(TIME_DELAY)
-        # self.angular_stepper_handler.move_to_deg(0)
-        # time.sleep(TIME_DELAY)
-        # self.linear_stepper_handler.select()
-        # coordinates = self.ball_handler.find_ball_location(frame)
-        pass
-
-    def spin360(self):
-        self.angular_stepper_handler.select()
-        time.sleep(0.05)
-        self.angular_stepper_handler.move_to_deg(-360)
-        time.sleep(0.05)
-        self.angular_stepper_handler.move_to_deg(360)
-        self.linear_stepper_handler.select()
-
-'''
-
-'''
-removed
-
-
-
-
-
-
-
-    def handle_coordinates_logic(self, frame, coordinates):
-        if coordinates is None or coordinates[0] is None or coordinates[1] is None:
-            return
-
-        coordinates = self.ball_handler.find_ball_location(frame)
-        self.tracker.update_position(coordinates[0], coordinates[1])
-
-        line = self.tracker.get_last_line()
-        if line is not None:
-            cv2.line(frame, line[0], line[1], (255, 255, 0), 2)
-
-
-        prediction = self.system_logic.predict_intersection(line, )
-        if prediction is None:
-            return
-        pred_x, pred_y = prediction
-        if self.is_point_on_segment((pred_x, pred_y)):
-            cv2.circle(frame, (int(pred_x), int(pred_y)), 10, (0, 0, 255), -1)
-            transformed_point = self.ball_handler.apply_perspective_transform(pred_x, pred_y)
-            # key = cv2.waitKey(1) & 0xFF
-
-            # if key == ord("g")
-            if transformed_point.any():
-                transformed_x, transformed_y = transformed_point
-                moving_mms = transformed_y % ((settings.BOARD_WIDTH_MM - settings.PLAYER_WIDTH_MM) // 3)
-                if self.prev_moving_mms is None or abs(moving_mms - self.prev_moving_mms) > 10:
-                    self.linear_stepper_handler.move_to_mm(moving_mms)
-                    self.prev_moving_mms = moving_mms
-                # if ball is close enough - kick
-                # first calculate distance
-                distance = self.calculate_distance_ball_to_line((transformed_x, transformed_y))
-                if distance < self.MIN_KICK_DIST:
-                    self.kick()
-                    print("Kicking...")
-        else:
-            closest = self.closest_endpoint((pred_x, pred_y))
-            self.draw_x(frame, closest, size=15, color=(255, 0, 0), thickness=2)
-
-
-
-'''
-
-
-def handle_coordinates_logic(self, frame, coordinates):
-    if coordinates is None or coordinates[0] is None or coordinates[1] is None:
-        return
-
-    coordinates = self.ball_handler.find_ball_location(frame)
-    self.tracker.update_position(coordinates[0], coordinates[1])
-
-    line = self.tracker.get_last_line()
-    if line is not None:
-        cv2.line(frame, line[0], line[1], (255, 255, 0), 2)
-
-    # distance = self.calculate_distance_ball_to_line(
-    #     self.ball_handler.apply_perspective_transform(coordinates[0], coordinates[1]))
-    # if not random.randint(0, 1000):  # Adjust the threshold as needed
-    #     self.kick()
-    #     print("trying to kick")
-
-    prediction = self.predict_intersection()
-    if prediction is None:
-        return
-    pred_x, pred_y = prediction
-    if self.is_point_on_segment((pred_x, pred_y)):
-        cv2.circle(frame, (int(pred_x), int(pred_y)), 10, (0, 0, 255), -1)
-        transformed_point = self.ball_handler.apply_perspective_transform(pred_x, pred_y)
-        # key = cv2.waitKey(1) & 0xFF
-
-        # if key == ord("g")
-        if transformed_point.any():
-            transformed_x, transformed_y = transformed_point
-            moving_mms = transformed_y % ((settings.BOARD_WIDTH_MM - settings.PLAYER_WIDTH_MM) // 3)
-            if self.prev_moving_mms is None or abs(moving_mms - self.prev_moving_mms) > 10:
-                self.linear_stepper_handler.move_to_mm(moving_mms)
-                self.prev_moving_mms = moving_mms
-            # if ball is close enough - kick
-            # first calculate distance```````````````
-            distance = self.calculate_distance_ball_to_line((transformed_x, transformed_y))
-            if distance < self.MIN_KICK_DIST:
-                self.kick()
-                print("Kicking...")
-    else:
-        closest = self.closest_endpoint((pred_x, pred_y))
-        self.draw_x(frame, closest, size=15, color=(255, 0, 0), thickness=2)
-
-def predict_intersection(self):
-    line = self.tracker.get_last_line()
-    if line is None:
-        return None
-
-    (x1, y1), (x2, y2) = line
-    (x3, y3) = self.player_row_start
-    (x4, y4) = self.player_row_end
-
-    def ccw(A, B, C):
-        return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
-
-    def segments_intersect(A, B, C, D):
-        return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
-
-    A, B = (x1, y1), (x2, y2)
-    C, D = (x3, y3), (x4, y4)
-
-    if not segments_intersect(A, B, C, D):
-        return None
-
-    # Compute intersection point
-    def line_intersection(p1, p2, p3, p4):
-        """Returns intersection point of lines p1p2 and p3p4"""
-        x1, y1 = p1
-        x2, y2 = p2
-        x3, y3 = p3
-        x4, y4 = p4
-
-        denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
-        if abs(denom) < 1e-6:
-            return None  # Lines are parallel
-
-        px = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / denom
-        py = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom
-        return (px, py)
-
-    return line_intersection(A, B, C, D)
-

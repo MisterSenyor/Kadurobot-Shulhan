@@ -17,7 +17,7 @@ PLAYER_WIDTH_MM = 20
 def MM_TO_STEPS(mm: int):
     # return round((mm + 0.2757) / 0.2148)
     # return round((mm) / 0.2148)
-    return round((mm) / 0.190)
+    return round((mm) / 0.2302)
 
 MAX_VELOCITY = 100000
 VELOCITY = 8000
@@ -40,7 +40,7 @@ MOVING_THRESHOLD = 8
 BAUD_RATE = 9600
 
 
-LIORAH_PORTS = ["COM8", "COM9"]
+LIORAH_PORTS = ["COM9", "COM8"]
 MINHA_PORTS = ["COM4", "COM6"]
-SERIAL_PORTS = MINHA_PORTS
+SERIAL_PORTS = LIORAH_PORTS
 

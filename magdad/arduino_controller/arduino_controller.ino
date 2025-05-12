@@ -1,145 +1,97 @@
-const int linearStepPin = 5;
-const int linearDirPin = 2;
-const int angularStepPin = 6;
-const int angularDirPin = 3;
-// int stepPin = linearStepPin;
-// int dirPin = linearDirPin;
-int stepPin = angularStepPin;
-int dirPin = angularDirPin;
-const int acceleration = 2;
-const int minStepDelay = 500;
-const int minStepDist = 100;
-const int maxTarget = 540;
+#include <AccelStepper.h>
 
-const int maxStepDelay = 700;
-int stepDelay = maxStepDelay; // Delay between steps in microseconds
-int linearStepCounter = 0;          // Tracks the current step position
-int angularStepCounter = 0;          // Tracks the current step position
+// === Angular Stepper Pins ===
+#define ANG0_STEP_PIN 5
+#define ANG0_DIR_PIN 2
 
+#define ANG1_STEP_PIN 6
+#define ANG1_DIR_PIN 3
+
+#define ANG2_STEP_PIN 7
+#define ANG2_DIR_PIN 4
+
+// === Motor Settings ===
+#define MAX_SPEED 3000
+#define ACCELERATION 50000
+#define MAX_TARGET 540
+#define MIN_STEPS 80
+
+// === Create 3 Angular Stepper Instances ===
+AccelStepper angularMotors[3] = {
+  AccelStepper(AccelStepper::DRIVER, ANG0_STEP_PIN, ANG0_DIR_PIN),
+  AccelStepper(AccelStepper::DRIVER, ANG1_STEP_PIN, ANG1_DIR_PIN),
+  AccelStepper(AccelStepper::DRIVER, ANG2_STEP_PIN, ANG2_DIR_PIN)
+};
 
 void setup() {
-  pinMode(linearStepPin, OUTPUT); // Set step pin as output
-  pinMode(linearDirPin, OUTPUT);  // Set direction pin as output
-  pinMode(angularStepPin, OUTPUT); // Set step pin as output
-  pinMode(angularDirPin, OUTPUT);  // Set direction pin as output
+  Serial.begin(9600);
+  Serial.println("Ready. Use ANGx <pos> (e.g., ANG1 300)");
 
-  digitalWrite(dirPin, HIGH); // Set initial direction
-  Serial.begin(9600); // Start serial communication
-  Serial.println("Ready! Send UP, DOWN, or a target step count.");
-}
-
-void step() {
-  digitalWrite(stepPin, HIGH);
-  delayMicroseconds(stepDelay);
-  digitalWrite(stepPin, LOW);
-  delayMicroseconds(stepDelay);
-}
-
-void stepToTargetConstant(int target, int &stepCounter) {
-  if (target != stepCounter) {
-    Serial.println(stepCounter);
-    Serial.println(target);
-
-    int stepsToRun = target - stepCounter; // Calculate steps needed to reach the target
-    int direction = (stepsToRun > 0) ? LOW : HIGH; // Determine direction
-    digitalWrite(dirPin, direction);
-
-    stepsToRun = abs(stepsToRun); // Use absolute value for the loop
-    while (Serial.available() > 0) {
-      Serial.read(); // Read and discard characters
-    }
-    for (int i = 0; i < stepsToRun; i++) {
-      if (Serial.available() > 0) {
-        char stopChar = Serial.read(); // Read the character
-        if (stopChar == 's') {
-          char stopChar = Serial.read(); // empty newline from queue
-          break; // Exit the loop
-        }
-      }
-      // Serial.println("Running step");
-      step();
-      stepCounter += (direction == LOW) ? 1 : -1; // Update the step counter
-    }
-
-    // Serial.println(stepCounter);
+  for (int i = 0; i < 3; ++i) {
+    angularMotors[i].setMaxSpeed(MAX_SPEED);
+    angularMotors[i].setAcceleration(ACCELERATION);
   }
 }
 
-void stepToTargetArticle(int target, int &stepCounter) {
-  if (target < 0 && stepPin == linearStepPin) {target = 0;}
-  if (target > maxTarget) {target = maxTarget;}
-  long stepsToGo = target - stepCounter;
-  if ((stepsToGo > 0 && stepsToGo < minStepDist) || (stepsToGo < 0 && stepsToGo > - minStepDist)) {
-    return;
-  }
-  
-  int direction = (stepsToGo > 0) ? LOW : HIGH;
-  digitalWrite(dirPin, direction);
-  stepsToGo = abs(stepsToGo);
-
-  float a = acceleration; // in steps/s²
-
-  float c0 = 0.676 * sqrt(2.0 / a) * 1000.0; // Initial delay in µs
-  float cn = c0;
-  float n = 0;
-
-  for (int i = 0; i < stepsToGo; i++) {
-    if (Serial.available() > 0) {
-      char stopChar = Serial.read(); // Read the character
-      if (stopChar == 's') {
-        char stopChar = Serial.read(); // empty newline from queue
-        break; // Exit the loop
-      }
-    }
-    stepDelay = (int)cn;
-    step();
-    stepCounter += (direction == LOW) ? 1 : -1;
-
-    if (cn > minStepDelay) {
-      // Acceleration phase
-      n++;
-      cn = cn - (2.0 * cn) / (4.0 * n + 1);
-    } else {
-      // Cruising at constant speed
-      cn = minStepDelay;
-    }
-  }
-}
-
-
-// void loop() {
-//   if (Serial.available() > 0) {
-//     String command = Serial.readStringUntil('\n'); // Read command
-//       if (command.equals("LIN")) {
-//       stepPin = linearStepPin;
-//       dirPin = linearDirPin;
-//       Serial.println(command);
-//     }
-//     else if (command.equals("ANG")) {
-//       stepPin = angularStepPin;
-//       dirPin = angularDirPin;
-//     }
-//     else {
-//       String command = Serial.readStringUntil('\n'); // Read number after s command
-//       Serial.println(command);
-//       int target = command.toInt(); // Convert the command to an integer
-//       stepToTargetArticle(target, stepPin == linearStepPin ? linearStepCounter : angularStepCounter);
-
-//     }
-//   }
-// }
-
-// void loop() {
-//   if (Serial.available() > 0) {
-//     String command = Serial.readStringUntil('\n'); // Read command
-//     command = Serial.readStringUntil('\n'); // Read number after s command
-//     Serial.println(command);
-//     while (true) {
-//       step();
-//     }
-//   }
-// }
+void reset_motors() {
+  for (int i = 0; i < 3; ++i) {
+    angularMotors[i].setCurrentPosition(0);
+  }}
 
 void loop() {
- step();
- }
+  if (Serial.available() > 0) {
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+
+    if (input.startsWith("MOT")) {
+      int motorIndex = input.charAt(3) - '0';
+      if (motorIndex >= 0 && motorIndex < 3) {
+        int spaceIndex = input.indexOf(' ');
+        if (spaceIndex > 0) {
+          int target = input.substring(spaceIndex + 1).toInt();
+          AccelStepper& motor = angularMotors[motorIndex];
+          if (abs(target - motor.currentPosition()) > MIN_STEPS) {
+            motor.moveTo(target);
+            Serial.print("Moving ANG");
+            Serial.print(motorIndex);
+            Serial.print(" to ");
+            Serial.println(target);
+          }
+        }
+      } else {
+        Serial.println("Invalid angular motor index");
+      }
+    }
+    else if (input.startsWith("RESET")) {
+      reset_motors();
+    }
+    else if (input.startsWith("STOP")) {
+      int motorIndex = input.charAt(3) - '0';
+      if (motorIndex >= 0 && motorIndex < 3) {
+        AccelStepper& motor = angularMotors[motorIndex];
+        motor.stop();
+      }
+      else {
+        Serial.println("Invalid angular motor index");
+      }
+    }
+    else if (input.startsWith("SET")) {
+      int motorIndex = input.charAt(3) - '0';
+      if (motorIndex >= 0 && motorIndex < 3) {
+        int spaceIndex = input.indexOf(' ');
+        if (spaceIndex > 0) {
+          int pos = input.substring(spaceIndex + 1).toInt();
+          AccelStepper& motor = angularMotors[motorIndex];
+          motor.setCurrentPosition(pos);
+        }
+      }
+      else {
+        Serial.println("Invalid angular motor index");
+      }
+    }
+  }
+
+  for (int i = 0; i < 3; ++i) {
+    angularMotors[i].run();
+  }
+}

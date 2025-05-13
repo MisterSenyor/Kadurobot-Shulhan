@@ -204,6 +204,76 @@ class PlayersDetector:
         # return valid_boxes
         return middles
 
+    def find_cluster_centers_along_lines(self, frame):
+        """
+        Find cluster centers of red-pixel activity close to user-defined lines.
+        Returns a list of center points (one per cluster) per line.
+        """
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, self.lower_red, self.upper_red)
+
+        # Get coordinates of all red pixels
+        red_pixels = np.column_stack(np.where(mask > 0))  # (y, x)
+
+        line_clusters = []
+
+        for line in self.lines:
+            if len(line) < 2:
+                continue
+            (x1, y1), (x2, y2) = line
+            line_vec = np.array([x2 - x1, y2 - y1])
+            line_length = np.linalg.norm(line_vec)
+            if line_length == 0:
+                continue
+            line_unit = line_vec / line_length
+
+            # Accumulate projected distances of red pixels onto the line
+            projected_points = []
+            for (py, px) in red_pixels:
+                vec_to_pixel = np.array([px - x1, py - y1])
+                proj_length = np.dot(vec_to_pixel, line_unit)
+                proj_point = np.array([x1, y1]) + proj_length * line_unit
+
+                # Accept if pixel is within ~15px from line
+                distance_to_line = np.linalg.norm(np.array([px, py]) - proj_point)
+                if 0 <= proj_length <= line_length and distance_to_line < 15:
+                    projected_points.append((proj_length, tuple(proj_point.astype(int))))
+
+            # Cluster 1D projected distances
+            projected_points.sort()
+            cluster_centers = []
+            cluster = []
+
+            for i in range(len(projected_points)):
+                if not cluster:
+                    cluster.append(projected_points[i])
+                else:
+                    if projected_points[i][0] - cluster[-1][0] < 30:  # Cluster threshold
+                        cluster.append(projected_points[i])
+                    else:
+                        # End of cluster
+                        if len(cluster) > 10:
+                            mean_point = np.mean([pt[1] for pt in cluster], axis=0).astype(int)
+                            cluster_centers.append(tuple(mean_point))
+                        cluster = [projected_points[i]]
+
+            # Add last cluster
+            if len(cluster) > 10:
+                mean_point = np.mean([pt[1] for pt in cluster], axis=0).astype(int)
+                cluster_centers.append(tuple(mean_point))
+
+            line_clusters.append(cluster_centers)
+
+            # Draw line and clusters
+            cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+            for center in cluster_centers:
+                cv2.circle(frame, center, 90, (0, 255, 255), -1)
+
+        cv2.imshow("Mask", mask)
+        cv2.imshow("Clusters on Lines", frame)
+
+        return line_clusters  # List of list of points, one list per line
+
     def rect_intersects_line(self, x1, y1, x2, y2, lx1, ly1, lx2, ly2):
         """
         Check if a rectangle intersects with a line.

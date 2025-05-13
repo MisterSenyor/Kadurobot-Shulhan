@@ -32,7 +32,7 @@ class StepperHandler:
     def move_to_mm(self, mm):
         print(f"MOVING TO {mm}, {MM_TO_STEPS(mm)}-----------------")
         if 0 <= MM_TO_STEPS(mm) <= MAX_TARGET:
-            self.arduino.write(f"{self.stepper_type} {MM_TO_STEPS(mm)}\n".encode())
+            self.arduino.write(f"{self.stepper_type} {MM_TO_STEPS(-mm)}\n".encode())
 
     def move_to_steps(self, steps):
         print(f"MOVING TO {steps}-----------------")

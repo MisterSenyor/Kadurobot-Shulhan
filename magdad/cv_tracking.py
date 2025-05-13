@@ -150,7 +150,7 @@ class BallTrackingSystem:
             print("transformed prediction is:", transformed_prediction)
 
             # debugging - DELETE the false part
-            if False and player_middles and len(player_middles) > i:
+            if player_middles and len(player_middles) > i:
                 players_middles_on_row = player_middles[i]
                 if players_middles_on_row is not None:
                     if len(players_middles_on_row) == 3:
@@ -158,17 +158,25 @@ class BallTrackingSystem:
                         _, transformed_middle_y = self.ball_handler.apply_perspective_transform(first_middle[0],
                                                                                                 first_middle[1])
                         print(f"setting mms according to players position which is {transformed_middle_y}")
-                        linear_stepper.set_mm(transformed_middle_y - settings.HALF_PLAYER_WIDTH_MM)
-                        self.current_players_positions[i] = transformed_middle_y - settings.HALF_PLAYER_WIDTH_MM
+                        linear_stepper.set_mm(transformed_middle_y)
+                        self.current_players_positions[i] = transformed_middle_y
             linear_movement = self.system_logic.get_linear_movement(transformed_prediction,
                                                                     self.current_players_positions[i])
             if linear_movement is not None:
+                cv2.putText(frame, f"Current Pos: {self.current_players_positions[i]}", (10, 150 + i * 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
                 # linear_stepper.select()
                 # self.steppers["linear"][i].set_mm(self.current_players_positions[i])
                 linear_stepper.move_to_mm(linear_movement)
                 # time.sleep(self.ANG_DELAY)
                 print(f"linear movement is: {linear_movement}")
                 self.current_players_positions[i] = linear_movement
+                # print on frame the linear movement
+                cv2.putText(frame, f"Linear Movement: {linear_movement}", (10, 50 + i * 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
+                cv2.putText(frame, f"Ball Predicted Position: {transformed_prediction}", (10, 100 + i * 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
+
                 # linear_stepper.move_to_mm(settings.BOARD_WIDTH_MM / 2)
                 # self.current_players_positions[i] = settings.BOARD_WIDTH_MM / 2
                 # self.steppers["linear"][i].set_mm(self.current_players_positions[i])
@@ -211,7 +219,8 @@ class BallTrackingSystem:
             if coordinates is not None and coordinates[0] is not None or coordinates[1] is None:
                 self.tracker.update_position(coordinates[0], coordinates[1])
 
-            if self.frame_idx % 5 == 0:
+            # play with the number of the frames
+            if self.frame_idx % 4 == 0:
                 self.manage_game(frame)
 
             if self.recording and self.video_writer:

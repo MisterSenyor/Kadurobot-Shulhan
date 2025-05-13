@@ -112,10 +112,11 @@ class SystemLogic:
             return None
         covering_players_location = [player_current_position + i * settings.DISTANCE_BETWEEN_PLAYERS_MM for i in
                                      covering_players]
-        chosen_player_location = argmin(
+        chosen_player = argmin(
             [abs(player_location - ball_y) for player_location in covering_players_location])
-        moving_mms = player_current_position + ball_y - chosen_player_location
-
+        # check about the half player constant if needed
+        moving_mms = player_current_position + ball_y - covering_players_location[
+            chosen_player] - settings.HALF_PLAYER_WIDTH_MM
         if abs(moving_mms - player_current_position) < self.MIN_MOVE_DIST:
             print(f"moving_mms: {moving_mms}, player_current_position: {player_current_position}")
             return None

@@ -32,7 +32,7 @@ count = 0
 line = ""
 arduino1.write("RESET\n".encode())
 arduino2.write("RESET\n".encode())
-c = 90
+c = 126/settings.MM_PER_STEP
 while True:
     try:
         # Command the Arduino to step the motor

@@ -120,6 +120,9 @@ class BallTrackingSystem:
         player_middles = self.player_handler.find_shapes_on_lines(frame)
 
         for i in range(3):
+            # debugging - DELETE
+            if i != 0:
+                continue
             row = self.player_rows[i]
 
             angular_stepper = self.steppers["angular"][i]

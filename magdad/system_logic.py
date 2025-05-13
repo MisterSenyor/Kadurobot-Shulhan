@@ -3,6 +3,7 @@ import time
 
 import keyboard
 import numpy as np
+from numpy import argmin
 
 import settings
 import stepper_api
@@ -100,7 +101,17 @@ class SystemLogic:
                             random=False):
         ball_x, ball_y = transformed_prediction
 
-        moving_mms = ball_y % ((settings.BOARD_WIDTH_MM - settings.PLAYER_WIDTH_MM) // 3)
+        # moving_mms = ball_y % ((settings.BOARD_WIDTH_MM - settings.PLAYER_WIDTH_MM / 2) // 3)
+        covering_players = []
+        for i in range(len(settings.PLAYERS_RANGES)):
+            start, end = settings.PLAYERS_RANGES[i]
+            if start <= ball_y <= end:
+                covering_players.append(i)
+        covering_players_location = [player_current_position + i * settings.DISTANCE_BETWEEN_PLAYERS_MM for i in
+                                     covering_players]
+        moving_dist_mms = min([player_location - ball_y for player_location in covering_players_location])
+        moving_mms = player_current_position + moving_dist_mms
+
         if abs(moving_mms - player_current_position) < self.MIN_MOVE_DIST:
             print(f"moving_mms: {moving_mms}, player_current_position: {player_current_position}")
             return None

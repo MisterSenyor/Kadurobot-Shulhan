@@ -71,7 +71,7 @@ while True:
             c += 90
             c = c % 360
             # current_ang.move_to_steps(1000)
-            time.sleep(0.05)
+            time.sleep(0.2)
         elif keyboard.is_pressed("d"):
             current_lin.stop()
             time.sleep(0.05)

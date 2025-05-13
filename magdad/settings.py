@@ -29,7 +29,8 @@ PLAYERS_RANGES = [
 def MM_TO_STEPS(mm: int):
     # return round((mm + 0.2757) / 0.2148)
     # return round((mm) / 0.2148)
-    return round((mm) / 0.2302)
+    # return round((mm) / 0.2302)
+    return round((mm) / 0.2)
 
 
 MAX_VELOCITY = 100000
@@ -54,4 +55,4 @@ BAUD_RATE = 9600
 LIORAH_PORTS = ["COM9", "COM8"]
 MINHA_PORTS = ["COM4", "COM6"]
 STROL_PORTS = ["COM10", "COM9"]
-SERIAL_PORTS = STROL_PORTS
+SERIAL_PORTS = LIORAH_PORTS

@@ -40,7 +40,12 @@ class PlayersDetector:
         # self.upper_red1 = np.array([180, 255, 255])
 
         # Lines defined by middle mouse clicks
-        self.lines = []
+        self.lines = [[(518, 144), (525, 457)],
+
+                      [(348, 136), (352, 458)],
+
+                      [(174, 143), (178, 461)]
+                      ]
 
         # Load preset values if available
         self.load_hsv_values()
@@ -163,7 +168,7 @@ class PlayersDetector:
                     valid_boxes_on_line.append(box)
                     break
             if valid_boxes_on_line:
-                valid_boxes.append(valid_boxes_on_line[0])  # Only keep the first valid box
+                valid_boxes.append(valid_boxes_on_line)  # Only keep the first valid box
 
         # Draw lines and valid bounding boxes
         for line in self.lines:

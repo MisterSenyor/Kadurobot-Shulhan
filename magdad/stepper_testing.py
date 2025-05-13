@@ -20,11 +20,11 @@ time.sleep(1)  # Wait for the connection to establish
 #                 StepperHandler(arduino2, stepper_type="MOT1"),
 #                 StepperHandler(arduino2, stepper_type="MOT2")]
 lin_handlers = [StepperHandler(arduino1, stepper_type="MOT0"),
-                StepperHandler(arduino1, stepper_type="MOT1"),
-                StepperHandler(arduino1, stepper_type="MOT2")]
+                None,
+                None]
 ang_handlers = [StepperHandler(arduino2, stepper_type="MOT0"),
-                StepperHandler(arduino2, stepper_type="MOT1"),
-                StepperHandler(arduino2, stepper_type="MOT2")]
+                None,
+                None]
 current_lin = lin_handlers[0]
 current_ang = ang_handlers[0]
 print("Starting stepper motor control...")
@@ -67,11 +67,14 @@ while True:
             # time.sleep(0.5)
             # current_ang.move_to_steps(c)
             # time.sleep(0.5)
+            current_lin.move_to_steps(0)
+            time.sleep(0.2)
             current_lin.move_to_steps(c)
             c += 90
-            c = c % 360
-            # current_ang.move_to_steps(1000)
+            c = c % 900
+            # current_ang.move_to_steps(0)
             time.sleep(0.2)
+
         elif keyboard.is_pressed("d"):
             current_lin.stop()
             time.sleep(0.05)

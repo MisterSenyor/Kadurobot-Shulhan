@@ -118,7 +118,6 @@ class BallTrackingSystem:
             cv2.line(frame, line[0], line[1], (255, 255, 0), 2)
 
         player_middles = self.player_handler.find_shapes_on_lines(frame)
-
         for i in range(3):
             # debugging - DELETE
             if i != 0:
@@ -148,23 +147,27 @@ class BallTrackingSystem:
             linear_stepper = self.steppers["linear"][i]
 
             transformed_prediction = self.ball_handler.apply_perspective_transform(pred_x, pred_y)
+            print("transformed prediction is:", transformed_prediction)
 
-            if player_middles and len(player_middles) > i:
+            # debugging - DELETE the false part
+            if False and player_middles and len(player_middles) > i:
                 players_middles_on_row = player_middles[i]
                 if players_middles_on_row is not None:
                     if len(players_middles_on_row) == 3:
                         first_middle = players_middles_on_row[0]
                         _, transformed_middle_y = self.ball_handler.apply_perspective_transform(first_middle[0],
                                                                                                 first_middle[1])
+                        print(f"setting mms according to players position which is {transformed_middle_y}")
                         linear_stepper.set_mm(transformed_middle_y - settings.HALF_PLAYER_WIDTH_MM)
                         self.current_players_positions[i] = transformed_middle_y - settings.HALF_PLAYER_WIDTH_MM
             linear_movement = self.system_logic.get_linear_movement(transformed_prediction,
                                                                     self.current_players_positions[i])
             if linear_movement is not None:
                 # linear_stepper.select()
-                self.steppers["linear"][i].set_mm(self.current_players_positions[i])
+                # self.steppers["linear"][i].set_mm(self.current_players_positions[i])
                 linear_stepper.move_to_mm(linear_movement)
                 # time.sleep(self.ANG_DELAY)
+                print(f"linear movement is: {linear_movement}")
                 self.current_players_positions[i] = linear_movement
                 # linear_stepper.move_to_mm(settings.BOARD_WIDTH_MM / 2)
                 # self.current_players_positions[i] = settings.BOARD_WIDTH_MM / 2

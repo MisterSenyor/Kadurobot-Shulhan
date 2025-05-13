@@ -13,6 +13,12 @@ baud_rate = 9600
 arduino1 = serial.Serial(serial_port1, baud_rate)
 arduino2 = serial.Serial(serial_port2, baud_rate)
 time.sleep(1)  # Wait for the connection to establish
+# lin_handlers = [StepperHandler(arduino1, stepper_type="MOT0"),
+#                 StepperHandler(arduino1, stepper_type="MOT1"),
+#                 StepperHandler(arduino1, stepper_type="MOT2")]
+# ang_handlers = [StepperHandler(arduino2, stepper_type="MOT0"),
+#                 StepperHandler(arduino2, stepper_type="MOT1"),
+#                 StepperHandler(arduino2, stepper_type="MOT2")]
 lin_handlers = [StepperHandler(arduino1, stepper_type="MOT0"),
                 StepperHandler(arduino1, stepper_type="MOT1"),
                 StepperHandler(arduino1, stepper_type="MOT2")]
@@ -69,6 +75,21 @@ while True:
         elif keyboard.is_pressed("d"):
             current_lin.stop()
             time.sleep(0.05)
+        elif keyboard.is_pressed("w"):
+            current_ang.move_to_deg(383)
+            time.sleep(0.2)
+            current_ang.set_steps(0)
+            time.sleep(0.2)
+        elif keyboard.is_pressed("e"):
+            current_ang.move_to_deg(-383)
+            time.sleep(0.2)
+            current_ang.set_steps(0)
+            time.sleep(0.2)
+        elif keyboard.is_pressed("p"):
+            current_lin.move_to_deg(360)
+            time.sleep(0.2)
+            current_lin.set_steps(0)
+            time.sleep(0.2)
         elif keyboard.is_pressed("f"):
             current_lin.set_mm(0)
 

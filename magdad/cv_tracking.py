@@ -16,6 +16,7 @@ from system_logic import SystemLogic
 
 class BallTrackingSystem:
     def __init__(self, json_path, ip_cam_url=None, video=False):
+        self.player_handler = player_cv.PlayersDetector()
         self.table_points = None
         self.aggressive_row = None
         self.middle_row = None
@@ -45,7 +46,7 @@ class BallTrackingSystem:
             self.source = json_data["path"]
         else:
             self.source = 2
-        self.ANG_DELAY = 0.1
+        self.ANG_DELAY = 0.2
 
     @staticmethod
     def initialize_steppers():
@@ -53,11 +54,13 @@ class BallTrackingSystem:
         if len(serials) == 2:
             steppers = {
                 "linear": [stepper_api.StepperHandler(serials[0], stepper_type=f"MOT{i}") for i in range(3)],
-                "angular": [stepper_api.StepperHandler(serials[1], stepper_type=f"MOT{i}") for i in range(3)]
+                "angular": [
+                    stepper_api.StepperHandler(serials[1], stepper_type=f"MOT{i}", calibration=settings.ANGULAR_STEPPER)
+                    for i in range(3)]
             }
         else:
             steppers = {
-                "linear": [stepper_api.StepperHandler(arduino_serial, stepper_type=settings.LINEAR_STEPPER) for
+                "linear": [stepper_api.StepperHandler(arduino_serial, stepper_type=settings.LINEAR_STEPPER, ) for
                            arduino_serial in serials],
                 "angular": [stepper_api.StepperHandler(arduino_serial, stepper_type=settings.ANGULAR_STEPPER) for
                             arduino_serial in serials],
@@ -108,22 +111,28 @@ class BallTrackingSystem:
         coordinates = self.ball_handler.find_ball_location(frame)[:2]
         if coordinates is None or coordinates[0] is None or coordinates[1] is None:
             return
-        self.tracker.update_position(coordinates[0], coordinates[1])
+        # self.tracker.update_position(coordinates[0], coordinates[1])
 
         line = self.tracker.get_last_line()
         if line is not None:
             cv2.line(frame, line[0], line[1], (255, 255, 0), 2)
 
+        player_middles = self.player_handler.find_shapes_on_lines(frame)
+
         for i in range(3):
             row = self.player_rows[i]
+
             angular_stepper = self.steppers["angular"][i]
             angular_movement = self.system_logic.get_angular_movement(coordinates, row)
             if angular_movement is not None:
                 # angular_stepper.select()
+                angular_stepper.set_steps(0)
                 for angle in angular_movement:
-                    angular_stepper.move_to_deg(angle)
-                    time.sleep(self.ANG_DELAY)
-                angular_stepper.move_to_deg(0)
+                    if i == 2:
+                        angle = -angle
+                    # angular_stepper.move_to_deg(angle)
+                    # time.sleep(self.ANG_DELAY)
+                # angular_stepper.move_to_deg(0)
                 # angular_stepper.set_steps(0)
             prediction = self.system_logic.predict_intersection(line, row)
             if prediction is None:
@@ -136,16 +145,27 @@ class BallTrackingSystem:
             linear_stepper = self.steppers["linear"][i]
 
             transformed_prediction = self.ball_handler.apply_perspective_transform(pred_x, pred_y)
+
+            if player_middles and len(player_middles) > i:
+                players_middles_on_row = player_middles[i]
+                if players_middles_on_row is not None:
+                    if len(players_middles_on_row) == 3:
+                        first_middle = players_middles_on_row[0]
+                        _, transformed_middle_y = self.ball_handler.apply_perspective_transform(first_middle[0],
+                                                                                                first_middle[1])
+                        linear_stepper.set_mm(transformed_middle_y - settings.HALF_PLAYER_WIDTH_MM)
+                        self.current_players_positions[i] = transformed_middle_y - settings.HALF_PLAYER_WIDTH_MM
             linear_movement = self.system_logic.get_linear_movement(transformed_prediction,
                                                                     self.current_players_positions[i])
             if linear_movement is not None:
                 # linear_stepper.select()
-                linear_stepper.move_to_mm(linear_movement)
-                time.sleep(self.ANG_DELAY)
-                self.current_players_positions[i] = linear_movement
-                linear_stepper.move_to_mm(settings.BOARD_WIDTH_MM / 2)
-                self.current_players_positions[i] = settings.BOARD_WIDTH_MM / 2
                 self.steppers["linear"][i].set_mm(self.current_players_positions[i])
+                linear_stepper.move_to_mm(linear_movement)
+                # time.sleep(self.ANG_DELAY)
+                self.current_players_positions[i] = linear_movement
+                # linear_stepper.move_to_mm(settings.BOARD_WIDTH_MM / 2)
+                # self.current_players_positions[i] = settings.BOARD_WIDTH_MM / 2
+                # self.steppers["linear"][i].set_mm(self.current_players_positions[i])
 
     @staticmethod
     def draw_x(frame, center, size=10, color=(0, 0, 255), thickness=2):
@@ -180,7 +200,13 @@ class BallTrackingSystem:
             # player_boxes = self.player_handler.find_shapes_on_lines(frame)
             for row in self.player_rows:
                 cv2.line(frame, row[0], row[1], (0, 255, 0), 2)
-            self.manage_game(frame)
+
+            coordinates = self.ball_handler.find_ball_location(frame)[:2]
+            if coordinates is not None and coordinates[0] is not None or coordinates[1] is None:
+                self.tracker.update_position(coordinates[0], coordinates[1])
+
+            if self.frame_idx % 5 == 0:
+                self.manage_game(frame)
 
             if self.recording and self.video_writer:
                 self.video_writer.write(frame)
@@ -241,9 +267,6 @@ class BallTrackingSystem:
             self.video_writer.release()
             self.video_writer = None
             print("⏹️ Stopped recording.")
-
-
-
 
 
 if __name__ == "__main__":

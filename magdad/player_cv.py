@@ -98,7 +98,8 @@ class PlayersDetector:
         @param grouping_distance: Maximum distance between contours to be grouped together.
         """
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv_frame, self.lower_blue, self.upper_blue)
+        mask = cv2.inRange(hsv_frame, self.lower_red, self.upper_red)
+        # mask = cv2.inRange(hsv_frame, self.lower_blue, self.upper_blue)
 
         # Find contours in the mask
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -136,6 +137,7 @@ class PlayersDetector:
         #     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255), 2)  # Yellow debug boxes
 
         for box in bounding_boxes:
+            valid_boxes_on_line = []
             x1, y1, x2, y2 = box
             for line in self.lines:
                 if len(line) < 2:
@@ -143,7 +145,7 @@ class PlayersDetector:
                 lx1, ly1 = line[0]
                 lx2, ly2 = line[1]
                 if self.rect_intersects_line(x1, y1, x2, y2, lx1, ly1, lx2, ly2):
-                        # Determine the bounds of the square
+                    # Determine the bounds of the square
                     r = 15
                     square_min_x = min(x1, x2)
                     square_max_x = max(x1, x2)
@@ -158,8 +160,10 @@ class PlayersDetector:
                     distance_squared = (closest_x - mouse_coordinates[0]) ** 2 + (closest_y - mouse_coordinates[1]) ** 2
                     if distance_squared <= r ** 2:
                         mouse_coordinates = [100, 100]
-                    valid_boxes.append(box)
+                    valid_boxes_on_line.append(box)
                     break
+            if valid_boxes_on_line:
+                valid_boxes.append(valid_boxes_on_line[0])  # Only keep the first valid box
 
         # Draw lines and valid bounding boxes
         for line in self.lines:
@@ -172,16 +176,29 @@ class PlayersDetector:
         for contour in contours:
             cv2.drawContours(frame, [contour], -1, (0, 255, 0), 2)  # Draw individual contours
 
-        for box in valid_boxes:
-            x1, y1, x2, y2 = box
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Draw valid bounding boxes
+        for valid_boxes_on_line in valid_boxes:
+            for box in valid_boxes_on_line:
+                x1, y1, x2, y2 = box
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Draw valid bounding boxes
 
         cv2.imshow("Mask", mask)
         processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
         cv2.imshow("Processed", processed_frame)
 
-        return valid_boxes
-    
+        middles = []
+        for valid_boxes_on_line in valid_boxes:
+            middles_on_line = []
+            for box in valid_boxes_on_line:
+                x1, y1, x2, y2 = box
+                middle_x = (x1 + x2) // 2
+                middle_y = (y1 + y2) // 2
+                middles_on_line.append((middle_x, middle_y))
+                # cv2.circle(frame, (middle_x, middle_y), 5, (0, 255, 0), -1)
+            middles.append(middles_on_line)
+
+        # return valid_boxes
+        return middles
+
     def rect_intersects_line(self, x1, y1, x2, y2, lx1, ly1, lx2, ly2):
         """
         Check if a rectangle intersects with a line.
@@ -209,13 +226,13 @@ class PlayersDetector:
         @param x3, y3, x4, y4: Endpoints of the second line.
         @return: True if the lines intersect, False otherwise.
         """
+
         def ccw(a, b, c):
             return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
 
         p1, p2 = (x1, y1), (x2, y2)
         p3, p4 = (x3, y3), (x4, y4)
         return ccw(p1, p3, p4) != ccw(p2, p3, p4) and ccw(p1, p2, p3) != ccw(p1, p2, p4)
-
 
     @staticmethod
     def is_point_on_line(point, line, tolerance=5):
@@ -350,6 +367,7 @@ class PlayersDetector:
 
         self.cap.release()
         cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     detector = PlayersDetector(camera_index=1, initial_group_threshold=20)

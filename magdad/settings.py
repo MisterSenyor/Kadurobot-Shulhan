@@ -1,6 +1,7 @@
 BOARD_WIDTH_MM = 340
 BOARD_HEIGHT_MM = 590
-HEIGHT_PADDING_MM = 25 # 25 including both directions
+HEIGHT_PADDING_MM = 25  # 25 including both directions
+HALF_PLAYER_WIDTH_MM = 11.5
 """
 Ran the following code:
 for _ in range(100):
@@ -10,14 +11,17 @@ and got 19.5 mm movement for steps_per_second = 100
 STEPS_PER_SECOND = 10
 CM_PER_STEPS = 7.9 / 400
 MM_PER_STEP = 0.2019
-DEG_PER_STEP = 360 / 400
+DEG_PER_STEP_LIN = 360 / 400
+DEG_PER_STEP_ANG = 383 / 400
 MAX_TARGET = 540
 PLAYER_WIDTH_MM = 20
+
 
 def MM_TO_STEPS(mm: int):
     # return round((mm + 0.2757) / 0.2148)
     # return round((mm) / 0.2148)
     return round((mm) / 0.2302)
+
 
 MAX_VELOCITY = 100000
 VELOCITY = 8000
@@ -36,12 +40,9 @@ ANGULAR_STEPPER = "ANG\n"
 TRIPLE_STEPPER_TYPES = [LINEAR_STEPPER, ANGULAR_STEPPER, "TRI\n"]
 MOVING_THRESHOLD = 8
 
-
 BAUD_RATE = 9600
-
 
 LIORAH_PORTS = ["COM9", "COM8"]
 MINHA_PORTS = ["COM4", "COM6"]
-STROL_PORTS = ["COM9", "COM10"]
+STROL_PORTS = ["COM10", "COM9"]
 SERIAL_PORTS = STROL_PORTS
-

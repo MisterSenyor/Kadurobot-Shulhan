@@ -11,8 +11,10 @@
 #define ANG2_DIR_PIN 4
 
 // === Motor Settings ===
-#define MAX_SPEED 6000
-#define ACCELERATION 40000
+// #define MAX_SPEED 6000 // good for linear
+// #define ACCELERATION 40000  // good for linear
+#define MAX_SPEED 6000 // good for angular
+#define ACCELERATION 40000  // good for angular
 #define MAX_TARGET 540
 #define MIN_STEPS 80
 

@@ -5,13 +5,14 @@ from settings import *
 
 
 class StepperHandler:
-    def __init__(self, arduino_serial, stepper_type=LINEAR_STEPPER):
+    def __init__(self, arduino_serial, stepper_type=LINEAR_STEPPER, calibration=LINEAR_STEPPER, timer=False):
         self.arduino = arduino_serial
         self.direction = DIR_UP
         self.stepper_type = stepper_type
         time.sleep(2)  # Wait for the connection to establish
         print(f"arduino serial: {self.direction.encode()}")
         self.arduino.write(self.direction.encode())
+        self.DEG_PER_STEP = DEG_PER_STEP_LIN if calibration == LINEAR_STEPPER else DEG_PER_STEP_ANG
 
     def select(self):
         self.arduino.write(f's{self.stepper_type}'.encode())
@@ -39,7 +40,7 @@ class StepperHandler:
         
     def move_to_deg(self, deg):
         print(f"MOVING TO {deg}-----------------")
-        self.arduino.write(f"{self.stepper_type} {round(deg / DEG_PER_STEP)}\n".encode())
+        self.arduino.write(f"{self.stepper_type} {round(deg / self.DEG_PER_STEP)}\n".encode())
     
     def set_stepper(self, motor):
         self.arduino.write(motor.encode())

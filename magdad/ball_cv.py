@@ -8,7 +8,7 @@ class BallDetector:
     Class for detecting a yellow ball in a live video feed.
     """
 
-    def __init__(self, camera_index=0, initial_ball_radius=20):
+    def __init__(self, camera_index=1, initial_ball_radius=20):
         """
         Initialize the YellowBallDetector.
         @param camera_index: Index of the camera (default is 0 for the primary camera).

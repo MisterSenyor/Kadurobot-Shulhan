@@ -13,13 +13,13 @@ class StepperHandler:
         self.reverse = reverse
         self.prev_pos = None
         self.last_move = None
-        time.sleep(2)  # Wait for the connection to establish
-        print(f"arduino serial: {self.direction.encode()}")
+        time.sleep(1)  # Wait for the connection to establish
         self.arduino.write(self.direction.encode())
         self.DEG_PER_STEP = DEG_PER_STEP_LIN if calibration == LINEAR_STEPPER else DEG_PER_STEP_ANG
 
     def select(self):
         self.arduino.write(f's{self.stepper_type}'.encode())
+
     def stop(self):
         self.arduino.write(f"STOP{self.stepper_type[-1]}\n".encode())
     

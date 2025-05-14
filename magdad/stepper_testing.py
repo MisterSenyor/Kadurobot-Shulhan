@@ -52,8 +52,10 @@ while True:
             time.sleep(0.05)
         
         elif keyboard.is_pressed("s"):
-            current_lin.move_to_steps(200)
-            current_ang.move_to_steps(200)
+            current_lin.set_steps(-640)
+            time.sleep(0.5)
+            current_lin.move_to_steps(0)
+            # current_ang.move_to_steps(-200)
             time.sleep(0.05)
         
         elif keyboard.is_pressed("d"):

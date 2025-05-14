@@ -15,8 +15,8 @@
 // #define ACCELERATION 40000  // good for linear
 #define MAX_SPEED 6000 // good for angular
 #define ACCELERATION 40000  // good for angular
-#define MAX_TARGET 540
 #define MIN_STEPS 80
+#define DIR(X) ((X - motor.targetPosition()) / abs(X - motor.targetPosition()))
 
 // === Create 3 Angular Stepper Instances ===
 AccelStepper angularMotors[3] = {
@@ -24,6 +24,10 @@ AccelStepper angularMotors[3] = {
   AccelStepper(AccelStepper::DRIVER, ANG1_STEP_PIN, ANG1_DIR_PIN),
   AccelStepper(AccelStepper::DRIVER, ANG2_STEP_PIN, ANG2_DIR_PIN)
 };
+
+int reversing[3] = {0, 0, 0};
+int targets[3] = {0, 0, 0};
+int motorIndex;
 
 void setup() {
   Serial.begin(9600);
@@ -46,13 +50,23 @@ void loop() {
     input.trim();
 
     if (input.startsWith("MOT")) {
-      int motorIndex = input.charAt(3) - '0';
+      motorIndex = input.charAt(3) - '0';
       if (motorIndex >= 0 && motorIndex < 3) {
         int spaceIndex = input.indexOf(' ');
         if (spaceIndex > 0) {
           int target = input.substring(spaceIndex + 1).toInt();
+          Serial.print("Asked to move to ");
+          Serial.println(target);
+          targets[motorIndex] = target;
           AccelStepper& motor = angularMotors[motorIndex];
-          if (abs(target - motor.currentPosition()) > MIN_STEPS) {
+          int pos = motor.currentPosition();
+          if (motor.isRunning() && ((target < pos && pos < motor.targetPosition()) || (target > pos && pos > motor.targetPosition()))) {
+            Serial.println("Initiating stop (non-blocking)");
+            motor.stop();                   // Initiate deceleration
+            reversing[motorIndex] = 1;      // Flag for post-stop handling
+          }
+          else if (abs(target - motor.targetPosition()) > MIN_STEPS) {
+          // if (abs(target - motor.targetPosition()) > MIN_STEPS) {
             motor.moveTo(target);
             Serial.print("Moving ANG");
             Serial.print(motorIndex);
@@ -78,6 +92,7 @@ void loop() {
       }
     }
     else if (input.startsWith("SET")) {
+      Serial.println(input);
       int motorIndex = input.charAt(3) - '0';
       if (motorIndex >= 0 && motorIndex < 3) {
         int spaceIndex = input.indexOf(' ');
@@ -85,6 +100,10 @@ void loop() {
           int pos = input.substring(spaceIndex + 1).toInt();
           AccelStepper& motor = angularMotors[motorIndex];
           motor.setCurrentPosition(pos);
+          Serial.print("Setting MOT");
+          Serial.print(motorIndex);
+          Serial.print(" to ");
+          Serial.println(pos);
         }
       }
       else {
@@ -94,6 +113,16 @@ void loop() {
   }
 
   for (int i = 0; i < 3; ++i) {
-    angularMotors[i].run();
+      AccelStepper& motor = angularMotors[i];
+      motor.run();  // Drive stepper as usual
+
+      if (reversing[i] && !motor.isRunning()) {
+        reversing[i] = 0;
+        motor.moveTo(targets[i]);  // Now safe to reverse direction
+        Serial.print("Stopped. Now reversing ANG");
+        Serial.print(i);
+        Serial.print(" to ");
+        Serial.println(targets[i]);
+      }
   }
 }

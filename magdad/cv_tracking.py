@@ -24,7 +24,10 @@ class BallTrackingSystem:
         self.system_logic = SystemLogic(self.table_points, self.aggressive_row, self.middle_row, self.goalkeeper_row)
         
         self.steppers = self.initialize_steppers()
-        self.linear_stepper_handler = self.steppers["linear"][1]
+        self.linear_stepper_handler = self.steppers["linear"][0]
+        self.steppers["linear"][0].reverse = -1
+        self.steppers["linear"][1].reverse = -1
+        self.steppers["linear"][2].reverse = -1
         self.angular_stepper_handler = self.steppers["angular"][0]
         
         self.frame_idx = 0
@@ -98,14 +101,12 @@ class BallTrackingSystem:
         coordinates = self.tracker.get_position()
         if coordinates is None:
             return
-        # self.tracker.update_position(coordinates[0], coordinates[1])
+        self.tracker.update_position(coordinates[0], coordinates[1])
         line = self.tracker.get_last_line()
         if line is not None:
             cv2.line(frame, line[0], line[1], (255, 255, 0), 2)
-        
         for i in range(3):
             row = self.player_rows[i]
-
             angular_stepper = self.steppers["angular"][i]
             angular_movement = self.system_logic.get_angular_movement(coordinates, row)
             if angular_movement is not None:
@@ -113,8 +114,8 @@ class BallTrackingSystem:
                 for angle in angular_movement:
                     if i == 2:
                         angle = -angle
-                    # angular_stepper.move_to_deg(angle)
-                    # time.sleep(ANG_DELAY)
+                #     angular_stepper.move_to_deg(angle)
+                #     time.sleep(ANG_DELAY)
                 # angular_stepper.move_to_deg(0)
                 # angular_stepper.set_steps(0)
             prediction = self.system_logic.predict_intersection(line, row)
@@ -126,41 +127,29 @@ class BallTrackingSystem:
             pred_x, pred_y = prediction
             cv2.circle(frame, (int(pred_x), int(pred_y)), 10, (0, 0, 255), -1)
             linear_stepper = self.steppers["linear"][i]
-
             transformed_prediction = self.ball_handler.apply_perspective_transform(pred_x, pred_y)
             print("transformed prediction is:", transformed_prediction)
-
             player_middles = self.player_handler.find_shapes_on_lines(frame)
             # debugging - DELETE the false part
             if player_middles and len(player_middles) > i:
                 players_middles_on_row = player_middles[i]
-                if players_middles_on_row is not None:
-                    if len(players_middles_on_row) == 3:
-                        first_middle = players_middles_on_row[0]
-                        _, transformed_middle_y = self.ball_handler.apply_perspective_transform(first_middle[0],
-                                                                                                first_middle[1])
-                        print(f"setting mms according to players position which is {transformed_middle_y}")
-                        linear_stepper.set_mm(transformed_middle_y)
-                        self.current_players_positions[i] = transformed_middle_y
+                if players_middles_on_row is not None and len(players_middles_on_row) == 3:
+                    first_middle = players_middles_on_row[2]
+                    _, transformed_middle_y = self.ball_handler.apply_perspective_transform(*first_middle)
+                    print(f"setting mms according to players position which is {transformed_middle_y}")
+                    # linear_stepper.set_mm(transformed_middle_y)
+                    self.current_players_positions[i] = transformed_middle_y
             linear_movement = self.system_logic.get_linear_movement(transformed_prediction,
                                                                     self.current_players_positions[i])
             if linear_movement is not None:
                 cv2.putText(frame, f"Current Pos: {self.current_players_positions[i]}", (10, 150 + i * 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.line_AA)
                 self.steppers["linear"][i].set_mm(self.current_players_positions[i])
                 linear_stepper.move_to_mm(linear_movement)
                 # time.sleep(ANG_DELAY)
                 print(f"linear movement is: {linear_movement}")
                 self.current_players_positions[i] = linear_movement
                 # print on frame the linear movement
-                cv2.putText(frame, f"Linear Movement: {linear_movement}", (10, 50 + i * 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
-                cv2.putText(frame, f"Ball Predicted Position: {transformed_prediction}", (10, 100 + i * 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
-
-                # linear_stepper.move_to_mm(settings.BOARD_WIDTH_MM / 2)
-                # self.current_players_positions[i] = settings.BOARD_WIDTH_MM / 2
-                # self.steppers["linear"][i].set_mm(self.current_players_positions[i])
 
     def run_tracking_live(self):
         self.initialize_perspective()
@@ -172,7 +161,7 @@ class BallTrackingSystem:
             if frame is None or frame.shape[0] <= 1 or frame.shape[1] <= 1:
                 continue
             
-            coordinates = self.ball_handler.run_frame(frame)
+            coordinates = self.ball_handler.find_ball_location(frame)
             player_middles = self.player_handler.find_shapes_on_lines(frame)
             for middle in player_middles:
                 for point in middle:
@@ -191,11 +180,25 @@ class BallTrackingSystem:
             elif key == ord("g"): # set position to match CV mm
                 first_goalie = player_middles[0][2]
                 first_goalie_mm = self.ball_handler.apply_perspective_transform(*first_goalie)
-                print(f"{first_goalie=}\t{first_goalie_mm=}")
-                self.linear_stepper_handler.set_mm(first_goalie_mm[1])
+                print(f"{player_middles=}\t{first_goalie_mm=}")
+                self.linear_stepper_handler.set_steps(-1 * settings.CV_MM_TO_STEPS(first_goalie_mm[1]))
+                time.sleep(0.05)
+                self.linear_stepper_handler.move_to_mm(73)
+                time.sleep(0.05)
+            elif key == ord("z"): # set position to match CV mm
+                first_goalie = player_middles[0][2]
+                first_goalie_mm = self.ball_handler.apply_perspective_transform(*first_goalie)
+                print(f"{player_middles=}\t{first_goalie_mm=}")
+                self.linear_stepper_handler.set_steps(-1 * settings.CV_MM_TO_STEPS(first_goalie_mm[1]))
+                time.sleep(0.05)
+                self.linear_stepper_handler.move_to_mm(0)
+                time.sleep(0.05)
+            elif key == ord("t"):
+                self.linear_stepper_handler.move_to_steps(-1 * random.randint(90, 620))
+                time.sleep(0.5)
+                
 
-            coordinates = self.ball_handler.find_ball_location(frame)[:2]
-            self.tracker.update_position(coordinates)
+            self.tracker.update_position(coordinates[:2])
 
             # play with the number of the frames
             if self.frame_idx % 4 == 0:

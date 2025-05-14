@@ -13,88 +13,51 @@ baud_rate = 9600
 arduino1 = serial.Serial(serial_port1, baud_rate)
 arduino2 = serial.Serial(serial_port2, baud_rate)
 time.sleep(1)  # Wait for the connection to establish
-# lin_handlers = [StepperHandler(arduino1, stepper_type="MOT0"),
-#                 StepperHandler(arduino1, stepper_type="MOT1"),
-#                 StepperHandler(arduino1, stepper_type="MOT2")]
-# ang_handlers = [StepperHandler(arduino2, stepper_type="MOT0"),
-#                 StepperHandler(arduino2, stepper_type="MOT1"),
-#                 StepperHandler(arduino2, stepper_type="MOT2")]
 lin_handlers = [StepperHandler(arduino1, stepper_type="MOT0"),
-                None,
-                None]
+                StepperHandler(arduino1, stepper_type="MOT1"),
+                StepperHandler(arduino1, stepper_type="MOT2")]
 ang_handlers = [StepperHandler(arduino2, stepper_type="MOT0"),
-                None,
-                None]
+                StepperHandler(arduino2, stepper_type="MOT1"),
+                StepperHandler(arduino2, stepper_type="MOT2")]
 current_lin = lin_handlers[0]
 current_ang = ang_handlers[0]
 print("Starting stepper motor control...")
-count = 0
-line = ""
 arduino1.write("RESET\n".encode())
 arduino2.write("RESET\n".encode())
-c = 126/settings.MM_PER_STEP
+
 while True:
     try:
-        # Command the Arduino to step the motor
-        # print("STARTING -----------------")
         if arduino1.in_waiting > 0:
             line = arduino1.readline().decode("utf-8").strip()
             print("Received: " + line)
-        if keyboard.is_pressed("v"):
-            print("MOT2")
-            current_lin = lin_handlers[1]
-            current_ang = ang_handlers[1]
-            # arduino.write(b"UP\n")
-        elif keyboard.is_pressed("c"):
+            
+        if keyboard.is_pressed("z"):
             print("MOT1")
             current_lin = lin_handlers[0]
             current_ang = ang_handlers[0]
-            # arduino.write(b"DOWN\n")
-
+            
         elif keyboard.is_pressed("x"):
+            print("MOT2")
+            current_lin = lin_handlers[1]
+            current_ang = ang_handlers[1]
+
+        elif keyboard.is_pressed("c"):
             print("MOT3")
             current_lin = lin_handlers[2]
             current_ang = ang_handlers[2]
 
         elif keyboard.is_pressed("a"):
-            # arduino.write(b"s\n0\n")  # Send the "step" command
             current_lin.move_to_steps(0)
             current_ang.move_to_steps(0)
             time.sleep(0.05)
+        
         elif keyboard.is_pressed("s"):
-            # arduino.write(b"s\n100\n")  # Send the "step" command
-            # current_lin.move_to_steps(c)
-            # time.sleep(0.5)
-            # current_ang.move_to_steps(c)
-            # time.sleep(0.5)
-            current_lin.move_to_steps(0)
-            time.sleep(0.2)
-            current_lin.move_to_steps(c)
-            c += 90
-            c = c % 900
-            # current_ang.move_to_steps(0)
-            time.sleep(0.2)
-
-        elif keyboard.is_pressed("d"):
-            current_lin.stop()
+            current_lin.move_to_steps(200)
+            current_ang.move_to_steps(200)
             time.sleep(0.05)
-        elif keyboard.is_pressed("w"):
-            current_ang.move_to_deg(383)
-            time.sleep(0.2)
-            current_ang.set_steps(0)
-            time.sleep(0.2)
-        elif keyboard.is_pressed("e"):
-            current_ang.move_to_deg(-383)
-            time.sleep(0.2)
-            current_ang.set_steps(0)
-            time.sleep(0.2)
-        elif keyboard.is_pressed("p"):
-            current_lin.move_to_deg(360)
-            time.sleep(0.2)
+        
+        elif keyboard.is_pressed("d"):
             current_lin.set_steps(0)
-            time.sleep(0.2)
-        elif keyboard.is_pressed("f"):
-            current_lin.set_mm(0)
 
         elif keyboard.is_pressed("q"):
             quit()

@@ -3,16 +3,6 @@ import cv2
 import numpy as np
 import json
 
-from numpy.testing.print_coercion_tables import print_coercion_table
-
-# import magdad.ball_cv as ball_cv, settings, magdad.stepper_api as stepper_api
-
-import ball_cv
-import stepper_api
-
-mouse_coordinates = [100, 100]
-
-
 class PlayersDetector:
     """
     Class for detecting shapes intersecting with lines in a live video feed.
@@ -24,11 +14,11 @@ class PlayersDetector:
         @param camera_index: Index of the camera (default is 0 for the primary camera).
         @param initial_ball_radius: Initial radius of the ball in pixels.
         """
-        self.ball_handler = ball_cv.BallDetector()
-        self.ball_handler.create_windows()
         self.camera_index = camera_index
         self.group_threshold = initial_group_threshold
         self.min_area = 5
+        self.quad_mask = None
+        self.selected_points = []
         self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use CAP_DSHOW for faster loading on Windows
 
         # HSV range for blue color
@@ -36,9 +26,7 @@ class PlayersDetector:
         self.upper_blue = np.array([54, 245, 255])  # Default upper bound
         self.lower_red = np.array([0, 115, 200])  # Default lower bound
         self.upper_red = np.array([20, 200, 255])
-        # self.lower_red1 = np.array([160, 100, 100])
-        # self.upper_red1 = np.array([180, 255, 255])
-
+        
         # Lines defined by middle mouse clicks
         self.lines = [[(518, 144), (525, 457)],
 
@@ -94,7 +82,6 @@ class PlayersDetector:
         return bounding_boxes
 
     def find_shapes_on_lines(self, frame):
-        global mouse_coordinates
         """
         Detect and process shapes that intersect with user-defined lines.
         Groups nearby contours into single bounding boxes if within a defined distance and ensures
@@ -102,6 +89,8 @@ class PlayersDetector:
         @param frame: Current frame from the video feed.
         @param grouping_distance: Maximum distance between contours to be grouped together.
         """
+        if self.quad_mask is not None:
+            frame = cv2.bitwise_and(frame, frame, mask=self.quad_mask)
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv_frame, self.lower_red, self.upper_red)
         # mask = cv2.inRange(hsv_frame, self.lower_blue, self.upper_blue)
@@ -138,35 +127,17 @@ class PlayersDetector:
         # Filter bounding boxes that intersect with any marked line
         valid_boxes = []
 
-        # for (x1, y1, x2, y2) in bounding_boxes:
-        #     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255), 2)  # Yellow debug boxes
-
-        for box in bounding_boxes:
+        for line in self.lines:
+            if len(line) < 2:
+                continue
+            lx1, ly1 = line[0]
+            lx2, ly2 = line[1]
             valid_boxes_on_line = []
-            x1, y1, x2, y2 = box
-            for line in self.lines:
-                if len(line) < 2:
-                    continue
-                lx1, ly1 = line[0]
-                lx2, ly2 = line[1]
+            for box in bounding_boxes:
+                x1, y1, x2, y2 = box
                 if self.rect_intersects_line(x1, y1, x2, y2, lx1, ly1, lx2, ly2):
-                    # Determine the bounds of the square
-                    r = 15
-                    square_min_x = min(x1, x2)
-                    square_max_x = max(x1, x2)
-                    square_min_y = min(y1, y2)
-                    square_max_y = max(y1, y2)
-
-                    # Closest point in the square to the circle center
-                    closest_x = max(square_min_x, min(mouse_coordinates[0], square_max_x))
-                    closest_y = max(square_min_y, min(mouse_coordinates[1], square_max_y))
-
-                    # Check distance from the closest point to the circle's center
-                    distance_squared = (closest_x - mouse_coordinates[0]) ** 2 + (closest_y - mouse_coordinates[1]) ** 2
-                    if distance_squared <= r ** 2:
-                        mouse_coordinates = [100, 100]
                     valid_boxes_on_line.append(box)
-                    break
+                    
             if valid_boxes_on_line:
                 valid_boxes.append(valid_boxes_on_line)  # Only keep the first valid box
 
@@ -177,9 +148,6 @@ class PlayersDetector:
             x1, y1 = line[0]
             x2, y2 = line[1]
             cv2.line(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Draw the line
-
-        for contour in contours:
-            cv2.drawContours(frame, [contour], -1, (0, 255, 0), 2)  # Draw individual contours
 
         for valid_boxes_on_line in valid_boxes:
             for box in valid_boxes_on_line:
@@ -200,7 +168,6 @@ class PlayersDetector:
                 middles_on_line.append((middle_x, middle_y))
                 # cv2.circle(frame, (middle_x, middle_y), 5, (0, 255, 0), -1)
             middles.append(middles_on_line)
-
         # return valid_boxes
         return middles
 
@@ -329,24 +296,43 @@ class PlayersDetector:
             m = (y2 - y1) / (x2 - x1)
             return abs(y - y1 - m * (x - x1)) <= tolerance
 
-    def display_hsv_on_click(self, event, x, y, flags, param):
+    def on_click(self, event, x, y, flags, param):
         """
-        Callback function to display HSV values and set lines on mouse click.
+        Callback function to display HSV values of a clicked pixel.
         @param event: The mouse event.
         @param x: X-coordinate of the click.
         @param y: Y-coordinate of the click.
         @param flags: Any relevant flags passed by OpenCV.
-        @param param: Additional parameters (frame).
+        @param param: Additional parameters (unused).
         """
-        global mouse_coordinates
-        if event == cv2.EVENT_RBUTTONDOWN:
-            if len(self.lines) > 0 and len(self.lines[-1]) < 2:
-                self.lines[-1].extend([[x, y]])  # Complete the line
-            else:
-                self.lines.append([[x, y]])  # Start a new line
-            print(f"Line defined: {self.lines[-1]}")
         if event == cv2.EVENT_LBUTTONDOWN:
-            mouse_coordinates = [x, y]
+            frame = param
+            hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            hsv_value = hsv_frame[y, x]
+            print(f"HSV Value at ({x}, {y}): {hsv_value}")
+
+        elif event == cv2.EVENT_RBUTTONDOWN and len(self.selected_points) < 4:
+            self.selected_points.append((x, y))
+            print(f"Point {len(self.selected_points)} selected at ({x}, {y})")
+
+            if len(self.selected_points) == 4:
+                self.create_quadrilateral_mask(param)
+
+    def create_quadrilateral_mask(self, frame):
+        """
+        Creates a mask for the quadrilateral defined by the selected points.
+        @param frame: The video frame.
+        """
+        mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+        points = np.array(self.selected_points, dtype=np.int32)
+        cv2.fillPoly(mask, [points], 255)
+
+        # Create semi-transparent overlay for the quadrilateral
+        overlay = frame.copy()
+        cv2.polylines(overlay, [points], isClosed=True, color=(0, 255, 0), thickness=2)
+        cv2.addWeighted(overlay, 0.3, frame, 0.7, 0, frame)
+
+        self.quad_mask = mask
 
     def load_hsv_values(self):
         """
@@ -357,6 +343,8 @@ class PlayersDetector:
                 hsv_values = json.load(file)
                 self.lower_blue = np.array(hsv_values["lower_blue"], dtype=np.uint8)
                 self.upper_blue = np.array(hsv_values["upper_blue"], dtype=np.uint8)
+                self.lower_red = np.array(hsv_values["lower_red"], dtype=np.uint8)
+                self.upper_red = np.array(hsv_values["upper_red"], dtype=np.uint8)
                 print("Loaded HSV values from player_cv_parameters.json")
         except FileNotFoundError:
             print("No HSV values file found. Using default values.")
@@ -420,18 +408,19 @@ class PlayersDetector:
 
         while True:
             ret, frame = self.cap.read()
-            self.ball_handler.run_frame(frame.copy())
             if not ret:
                 print("Failed to capture frame. Exiting.")
                 break
 
             # Set mouse callback for line definition
-            cv2.setMouseCallback("Original", self.display_hsv_on_click, frame)
+            cv2.setMouseCallback("Original", self.on_click, frame)
 
             # Detect shapes intersecting lines
             coords = self.find_shapes_on_lines(frame)
-            coords = self.get_bounding_boxes(frame)
-
+            # coords = self.get_bounding_boxes(frame)
+            for coord in coords:
+                for point in coord:
+                    cv2.circle(frame, point, 5, (255, 0, 0), -1)
             # Display frames
             cv2.imshow("Original", frame)
             # Highlight the detected area in the processed frame

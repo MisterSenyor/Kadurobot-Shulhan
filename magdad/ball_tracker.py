@@ -8,10 +8,22 @@ class BallTracker:
     def __init__(self, max_history=5):
         self.positions = [] # Store (x, y, t)
         self.max_history = max_history
+        self.resting = True
+        self.gone = False
 
-    def update_position(self, x, y):
-        if x is None or y is None:
+    def update_position(self, coordinates: tuple):
+        if coordinates is None:
+            self.gone = True
             return
+        x, y = coordinates
+        if x is None or y is None:
+            self.gone = True
+            return
+        
+        if self.resting:
+            self.resting = False
+        if self.gone:
+            self.gone = False
         # check if the ball has moved significantly
         if self.positions:
             last_x, last_y, last_t = self.positions[-1]
@@ -19,11 +31,16 @@ class BallTracker:
             dy = y - last_y
             distance = np.sqrt(dx**2 + dy**2)
             if distance < MIN_MOVEMENT:
-                # self.
+                self.resting = True
                 return
         if len(self.positions) >= self.max_history:
             self.positions.pop(0)
         self.positions.append((x, y, time.time()))
+
+    def get_position(self):
+        if len(self.positions) == 0:
+            return None
+        return self.positions[-1][:2]
 
     def get_velocity(self):
         if len(self.positions) < 2:

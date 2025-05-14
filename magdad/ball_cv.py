@@ -310,8 +310,8 @@ class BallDetector:
         while True:
             ret, frame = self.cap.read()
             if not ret:
-                print("Failed to capture frame. Exiting.")
-                break
+                print("Failed to capture frame.")
+                continue
 
             # Set mouse callback to display HSV values on click
             cv2.setMouseCallback("Ball-Original", self.on_click, frame)
@@ -351,5 +351,5 @@ class BallDetector:
 
 
 if __name__ == "__main__":
-    detector = BallDetector(camera_index=2, initial_ball_radius=20)
+    detector = BallDetector(camera_index=1, initial_ball_radius=20)
     detector.run()

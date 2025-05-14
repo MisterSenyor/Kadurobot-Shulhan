@@ -1,5 +1,4 @@
 import random
-
 import cv2
 import time
 import json
@@ -13,40 +12,44 @@ import settings
 import serial
 from system_logic import SystemLogic
 
+ANG_DELAY = 0.2
 
 class BallTrackingSystem:
     def __init__(self, json_path, ip_cam_url=None, video=False):
-        self.player_handler = player_cv.PlayersDetector()
-        self.table_points = None
-        self.aggressive_row = None
-        self.middle_row = None
-        self.goalkeeper_row = None
-        self.json_path = json_path
-        self.pausing = video
-        self.ip_cam_url = ip_cam_url
         self.tracker = BallTracker()
+        self.player_handler = player_cv.PlayersDetector()
         self.ball_handler = ball_cv.BallDetector()
-        # self.player_handler = player_cv.PlayersDetector()
+        self.json_path = json_path
+        self.load_config()
+        self.system_logic = SystemLogic(self.table_points, self.aggressive_row, self.middle_row, self.goalkeeper_row)
+        
         self.steppers = self.initialize_steppers()
         self.linear_stepper_handler = self.steppers["linear"][1]
         self.angular_stepper_handler = self.steppers["angular"][0]
-        self.load_config()
-        self.player_rows = [self.aggressive_row, self.middle_row, self.goalkeeper_row]
-        self.system_logic = SystemLogic(self.table_points, self.aggressive_row, self.middle_row, self.goalkeeper_row)
-        self.recording = False
-        self.video_writer = None
+        
         self.frame_idx = 0
-        self.prev_moving_mms = None
-        self.use_ipcam = ip_cam_url is not None
-        self.linear_stepper_handler.select()
+        self.table_points = None
         self.current_players_positions = [0, 0, 0]
+        self.player_rows = [self.aggressive_row, self.middle_row, self.goalkeeper_row]
+        self.prev_moving_mms = None
+        
+        self.recording = False
+        self.pausing = video
+        self.ip_cam_url = ip_cam_url
+        self.use_ipcam = ip_cam_url is not None
+        self.video_writer = None
         if video:
             with open(json_path, 'r') as f:
                 json_data = json.load(f)
             self.source = json_data["path"]
         else:
             self.source = 2
-        self.ANG_DELAY = 0.2
+
+    @staticmethod
+    def draw_x(frame, center, size=10, color=(0, 0, 255), thickness=2):
+        x, y = center
+        cv2.line(frame, (x - size, y - size), (x + size, y + size), color, thickness)
+        cv2.line(frame, (x - size, y + size), (x + size, y - size), color, thickness)
 
     @staticmethod
     def initialize_steppers():
@@ -76,8 +79,9 @@ class BallTrackingSystem:
         self.goalkeeper_row = (data["rows"][4][0], data["rows"][4][1])
         self.middle_row = (data["rows"][2][0], data["rows"][2][1])
         self.aggressive_row = (data["rows"][0][0], data["rows"][0][1])
-        # self.player_handler.lines = data["rows"]
+        self.player_handler.lines = data["rows"][::2]
         self.ball_handler.selected_points = self.table_points
+        self.player_handler.selected_points = self.table_points
 
     def initialize_perspective(self):
         while True:
@@ -90,50 +94,27 @@ class BallTrackingSystem:
         self.ball_handler.create_quadrilateral_mask(frame)
         self.ball_handler.calculate_perspective_transform()
 
-    def fetch_ipcam_frame(self):
-        try:
-            response = requests.get(self.ip_cam_url, timeout=1)
-            img_array = np.asarray(bytearray(response.content), dtype=np.uint8)
-            frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-            return frame
-        except Exception as e:
-            print(f"❌ Failed to fetch IP cam frame: {e}")
-            return None
-
-    def fetch_webcam_frame(self):
-        if not hasattr(self, "webcam_cap"):
-            # self.webcam_cap = cv2.VideoCapture(self.source, cv2.CAP_DSHOW)
-            self.webcam_cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-        ret, frame = self.webcam_cap.read()
-        return frame if ret else None
-
     def manage_game(self, frame):
-        coordinates = self.ball_handler.find_ball_location(frame)[:2]
-        if coordinates is None or coordinates[0] is None or coordinates[1] is None:
+        coordinates = self.tracker.get_position()
+        if coordinates is None:
             return
         # self.tracker.update_position(coordinates[0], coordinates[1])
-
         line = self.tracker.get_last_line()
         if line is not None:
             cv2.line(frame, line[0], line[1], (255, 255, 0), 2)
-
-        player_middles = self.player_handler.find_shapes_on_lines(frame)
+        
         for i in range(3):
-            # debugging - DELETE
-            if i != 0:
-                continue
             row = self.player_rows[i]
 
             angular_stepper = self.steppers["angular"][i]
             angular_movement = self.system_logic.get_angular_movement(coordinates, row)
             if angular_movement is not None:
-                # angular_stepper.select()
                 angular_stepper.set_steps(0)
                 for angle in angular_movement:
                     if i == 2:
                         angle = -angle
                     # angular_stepper.move_to_deg(angle)
-                    # time.sleep(self.ANG_DELAY)
+                    # time.sleep(ANG_DELAY)
                 # angular_stepper.move_to_deg(0)
                 # angular_stepper.set_steps(0)
             prediction = self.system_logic.predict_intersection(line, row)
@@ -149,6 +130,7 @@ class BallTrackingSystem:
             transformed_prediction = self.ball_handler.apply_perspective_transform(pred_x, pred_y)
             print("transformed prediction is:", transformed_prediction)
 
+            player_middles = self.player_handler.find_shapes_on_lines(frame)
             # debugging - DELETE the false part
             if player_middles and len(player_middles) > i:
                 players_middles_on_row = player_middles[i]
@@ -165,10 +147,9 @@ class BallTrackingSystem:
             if linear_movement is not None:
                 cv2.putText(frame, f"Current Pos: {self.current_players_positions[i]}", (10, 150 + i * 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
-                # linear_stepper.select()
-                # self.steppers["linear"][i].set_mm(self.current_players_positions[i])
+                self.steppers["linear"][i].set_mm(self.current_players_positions[i])
                 linear_stepper.move_to_mm(linear_movement)
-                # time.sleep(self.ANG_DELAY)
+                # time.sleep(ANG_DELAY)
                 print(f"linear movement is: {linear_movement}")
                 self.current_players_positions[i] = linear_movement
                 # print on frame the linear movement
@@ -181,22 +162,24 @@ class BallTrackingSystem:
                 # self.current_players_positions[i] = settings.BOARD_WIDTH_MM / 2
                 # self.steppers["linear"][i].set_mm(self.current_players_positions[i])
 
-    @staticmethod
-    def draw_x(frame, center, size=10, color=(0, 0, 255), thickness=2):
-        x, y = center
-        cv2.line(frame, (x - size, y - size), (x + size, y + size), color, thickness)
-        cv2.line(frame, (x - size, y + size), (x + size, y - size), color, thickness)
-
     def run_tracking_live(self):
         self.initialize_perspective()
         self.ball_handler.create_windows()
         print("🎮 Press 'r' to record, 's' to stop, 'q' to quit.")
         while True:
+            self.frame_idx += 1
             frame = self.fetch_ipcam_frame() if self.use_ipcam else self.fetch_webcam_frame()
             if frame is None or frame.shape[0] <= 1 or frame.shape[1] <= 1:
                 continue
-
-            self.frame_idx += 1
+            
+            coordinates = self.ball_handler.run_frame(frame)
+            player_middles = self.player_handler.find_shapes_on_lines(frame)
+            for middle in player_middles:
+                for point in middle:
+                    cv2.circle(frame, point, 5, (255, 0, 0), -1)
+            for row in self.player_rows:
+                cv2.line(frame, row[0], row[1], (0, 255, 0), 2)
+                
             key = cv2.waitKey(1) & 0xFF
 
             if key == ord("q"):
@@ -205,22 +188,18 @@ class BallTrackingSystem:
                 self.start_recording(frame)
             elif key == ord("s") and self.recording:
                 self.stop_recording()
-            elif key == ord("g"):
-                label = "Recording..." if self.recording else f"Live {self.tracker.get_velocity()}"
-                cv2.putText(frame, label, (10, 400), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                            (0, 0, 255) if self.recording else (0, 255, 0), 2)
-
-            coordinates = self.ball_handler.run_frame(frame)
-            # player_boxes = self.player_handler.find_shapes_on_lines(frame)
-            for row in self.player_rows:
-                cv2.line(frame, row[0], row[1], (0, 255, 0), 2)
+            elif key == ord("g"): # set position to match CV mm
+                first_goalie = player_middles[0][2]
+                first_goalie_mm = self.ball_handler.apply_perspective_transform(*first_goalie)
+                print(f"{first_goalie=}\t{first_goalie_mm=}")
+                self.linear_stepper_handler.set_mm(first_goalie_mm[1])
 
             coordinates = self.ball_handler.find_ball_location(frame)[:2]
-            if coordinates is not None and coordinates[0] is not None or coordinates[1] is None:
-                self.tracker.update_position(coordinates[0], coordinates[1])
+            self.tracker.update_position(coordinates)
 
             # play with the number of the frames
             if self.frame_idx % 4 == 0:
+                self.frame_idx = 0
                 self.manage_game(frame)
 
             if self.recording and self.video_writer:
@@ -261,12 +240,10 @@ class BallTrackingSystem:
                 for angular_stepper in angular_steppers:
                     angular_stepper.select()
                     angular_stepper.move_to_deg(-90)
-                    time.sleep(0.1)
+                    time.sleep(0.3)
                     angular_stepper.move_to_deg(90)
-                    time.sleep(0.1)
+                    time.sleep(0.3)
                     angular_stepper.move_to_deg(0)
-
-        # print("✅ Demo finished.")
 
     def start_recording(self, frame):
         self.recording = True
@@ -283,13 +260,29 @@ class BallTrackingSystem:
             self.video_writer = None
             print("⏹️ Stopped recording.")
 
+    def fetch_ipcam_frame(self):
+        try:
+            response = requests.get(self.ip_cam_url, timeout=1)
+            img_array = np.asarray(bytearray(response.content), dtype=np.uint8)
+            frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+            return frame
+        except Exception as e:
+            print(f"❌ Failed to fetch IP cam frame: {e}")
+            return None
+
+    def fetch_webcam_frame(self):
+        if not hasattr(self, "webcam_cap"):
+            # self.webcam_cap = cv2.VideoCapture(self.source, cv2.CAP_DSHOW)
+            self.webcam_cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+        ret, frame = self.webcam_cap.read()
+        return frame if ret else None
+
 
 if __name__ == "__main__":
     # json_path = "../data/test3.json"
     json_path = "../data/camera_data.json"
     ip_cam_url = "http://192.168.1.123:8080/shot.jpg"  # Set to None to use USB webcam
 
-    # system = BallTrackingSystem(json_path, ip_cam_url=ip_cam_url)
     system = BallTrackingSystem(json_path)
     system.run_tracking_live()
     # system.demo_all_rows_side_to_side()

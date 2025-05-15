@@ -62,7 +62,7 @@ class StepperHandler:
         if DEBUG:
             print(f"MOVING TO {deg}-----------------")
         now = datetime.datetime.now()
-        if self.last_move is None or (now - self.last_move).total_seconds() > 0.12:
+        if self.last_move is None or (now - self.last_move).total_seconds() > 0.15:
             self.set_steps(0)
             self.last_move = now
             self.arduino.write(f"{self.stepper_type} {self.reverse * round(deg / self.DEG_PER_STEP)}\n".encode())

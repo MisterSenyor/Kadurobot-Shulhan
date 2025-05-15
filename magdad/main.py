@@ -103,6 +103,8 @@ class BallTrackingSystem:
         self.player_handler.selected_points = self.table_points
 
     def initialize_perspective(self):
+        if settings.DEBUG:
+            cv2.namedWindow("Ball Tracking", cv2.WINDOW_NORMAL)
         while True:
             frame = self.fetch_frame()
             if frame is not None and frame.shape[0] > 0:
@@ -132,6 +134,7 @@ class BallTrackingSystem:
             # Predict intersection
             prediction = self.system_logic.predict_intersection(line, row)
             if prediction is None:
+                linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
                 continue
             _, trans_pred_y = self.ball_handler.apply_perspective_transform(*prediction)
             target_mm = self.system_logic.get_linear_movement(trans_pred_y,i)
@@ -214,8 +217,10 @@ class BallTrackingSystem:
                 stepper = self.steppers["angular"][2]
                 stepper.move_to_deg(80)
 
-
-            coordinates = self.ball_handler.find_ball_location(frame)[:2]
+            if settings.DEBUG:
+                coordinates = self.ball_handler.run_frame(frame)[:2]
+            else:
+                coordinates = self.ball_handler.find_ball_location(frame)[:2]
             if coordinates is not None and not None in coordinates:
                 self.tracker.update_position(coordinates[:2])
             # play with the number of the frames
@@ -226,17 +231,16 @@ class BallTrackingSystem:
 
             if self.recording and self.video_writer:
                 self.video_writer.write(frame)
-
-            if settings.DEBUG:
-                for row in self.player_rows:
-                    cv2.line(frame, row[0], row[1], (0, 255, 0), 2)
-                cv2.namedWindow("Ball Tracking", cv2.WINDOW_NORMAL)
-                cv2.imshow("Ball Tracking", frame)
             if self.pausing:
                 while True:
                     key = cv2.waitKey(1) & 0xFF
                     if key == ord(" "):
                         break
+            if settings.DEBUG:
+                for row in self.player_rows:
+                    cv2.line(frame, row[0], row[1], (0, 255, 0), 2)
+                cv2.imshow("Ball Tracking", frame)
+
         if self.video_writer:
             self.video_writer.release()
         cv2.destroyAllWindows()

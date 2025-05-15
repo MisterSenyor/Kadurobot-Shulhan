@@ -109,7 +109,7 @@ class SystemLogic:
         if len(covering_players) == 0:
             if settings.DEBUG:
                 print("No covering players")
-            return None
+            return settings.MIDDLE_LOCATION_MM
         covering_players_location = [
             player_current_position + i * settings.DISTANCE_BETWEEN_PLAYERS_MM for i in
             covering_players]

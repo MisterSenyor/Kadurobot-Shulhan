@@ -84,14 +84,14 @@ class BallTrackingSystem:
         for i in range(3):
             linear_stepper = self.steppers["linear"][i]
             linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
-        time.sleep(0.2)
+        time.sleep(0.5)
         for i in range(3):
             linear_stepper = self.steppers["linear"][i]
             linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM + 50)
         for i in range(3):
             angular_stepper = self.steppers["angular"][i]
             angular_stepper.move_to_deg(360)
-        time.sleep(0.2)
+        time.sleep(0.5)
 
         for i in range(3):
             linear_stepper = self.steppers["linear"][i]
@@ -99,11 +99,11 @@ class BallTrackingSystem:
         for i in range(3):
             angular_stepper = self.steppers["angular"][i]
             angular_stepper.move_to_deg(360)
-        time.sleep(0.2)
+        time.sleep(0.5)
         for i in range(3):
             linear_stepper = self.steppers["linear"][i]
             linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
-        time.sleep(0.2)
+        time.sleep(0.5)
 
     def mourn_loss(self):
         print("❌ LOSS! Saying message and playing sad sound.")
@@ -111,24 +111,6 @@ class BallTrackingSystem:
         self.engine.runAndWait()
 
         threading.Thread(target=self.play_music_for_2_seconds, args=(self.SAD_SOUND,), daemon=True).start()
-
-    # def celebrate_win(self):
-    #     print("✅ WIN! Saying message and playing happy sound.")
-    #     self.engine.say("Great goal!")
-    #     self.engine.runAndWait()
-    #     self.win_dance()
-    #     pygame.mixer.music.load(self.HAPPY_SOUND)
-    #     pygame.mixer.music.play()
-    #     time.sleep(5)
-    #
-    # def mourn_loss(self):
-    #     print("❌ LOSS! Saying message and playing sad sound.")
-    #     self.engine.say("Oh no... we missed!")
-    #     self.engine.runAndWait()
-    #
-    #     pygame.mixer.music.load(self.SAD_SOUND)
-    #     pygame.mixer.music.play()
-    #     time.sleep(5)
 
     @staticmethod
     def initialize_steppers():
@@ -181,6 +163,10 @@ class BallTrackingSystem:
         self.goalkeeper_row = (data["rows"][0][0], data["rows"][0][1])
         self.player_handler.lines = data["rows"][::2]
         self.ball_handler.selected_points = self.table_points
+        self.ball_handler.goal_masks = [
+            data["red_goal"],
+            data["blue_goal"]
+        ]
         self.player_handler.selected_points = self.table_points
 
     def initialize_perspective(self):
@@ -201,27 +187,27 @@ class BallTrackingSystem:
         # check and handle goal
         if coordinates is None or None in coordinates:
             if not self.goal:
-                self.check_goal()
+                self.check_goal(frame)
             return
         self.goal = False
         if coordinates and None not in coordinates:
             self.offensive_state(frame, coordinates, player_middles)
 
-    def check_goal(self):
+    def check_goal(self, frame):
         print("check goal was called")
         # if we score a goal
-        last_seen_on = self.tracker.get_last_seen_position()
-        if last_seen_on is None:
-            return
-        transformed_last_seen = self.ball_handler.apply_perspective_transform(*last_seen_on)
-        if transformed_last_seen[0] < 50:
+        # last_seen_on = self.tracker.get_last_seen_position()
+        # if last_seen_on is None:
+        #     return
+        goal_type = self.ball_handler.is_ball_in_goal(frame)
+        if goal_type == "BLUE":
             self.goal = True
             print("GOALLLLLL")
             self.our_goals += 1
             print("Goals: ", self.our_goals, ":", self.enemy_goals)
             self.celebrate_win()
         # if they score a goal
-        elif transformed_last_seen[0] > 535:
+        elif goal_type == "RED":
             self.goal = True
             print("goallllll")
             self.enemy_goals += 1

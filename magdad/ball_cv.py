@@ -29,6 +29,7 @@ class BallDetector:
         # List to store selected points for the quadrilateral
         self.selected_points = []
         self.quad_mask = None
+        self.goal_masks = None
         self.transform_matrix = None
 
     def display_hsv_on_click(self, event, x, y, flags, param):
@@ -49,6 +50,41 @@ class BallDetector:
             print(f"Line defined: {self.lines[-1]}")
         if event == cv2.EVENT_LBUTTONDOWN:
             mouse_coordinates = [x, y]
+
+    def is_ball_in_goal(self, frame):
+        if self.goal_masks is not None:
+            frame_red = cv2.bitwise_and(frame, frame, mask=self.goal_masks[0])
+            frame_blue = cv2.bitwise_and(frame, frame, mask=self.goal_masks[1])
+
+        # Convert frame to HSV color space
+        hsv_frame_red = cv2.cvtColor(frame_red, cv2.COLOR_BGR2HSV)
+        hsv_frame_blue = cv2.cvtColor(frame_blue, cv2.COLOR_BGR2HSV)
+
+        # Threshold the HSV image to get only yellow
+        mask_red = cv2.inRange(hsv_frame_red, self.lower_dark_yellow, self.upper_dark_yellow)
+        mask_blue = cv2.inRange(hsv_frame_blue, self.lower_dark_yellow, self.upper_dark_yellow)
+
+        # Perform morphological operations to remove noise
+        kernel = np.ones((5, 5), np.uint8)
+        mask_red = cv2.morphologyEx(mask_red, cv2.MORPH_CLOSE, kernel)
+        mask_red = cv2.morphologyEx(mask_red, cv2.MORPH_OPEN, kernel)
+        mask_blue = cv2.morphologyEx(mask_blue, cv2.MORPH_CLOSE, kernel)
+        mask_blue = cv2.morphologyEx(mask_blue, cv2.MORPH_OPEN, kernel)
+
+        # Find contours in the mask
+        contours_red, _ = cv2.findContours(mask_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours_blue, _ = cv2.findContours(mask_blue, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        for contour in contours_red:
+            # Calculate area and filter by ball radius
+            # ((x, y), radius) = cv2.minEnclosingCircle(contour)
+            # if radius > self.min_ball_radius and radius < self.ball_radius:
+            return "RED"
+        for contour in contours_blue:
+            # Calculate area and filter by ball radius
+            # ((x, y), radius) = cv2.minEnclosingCircle(contour)
+            # if radius > self.min_ball_radius and radius < self.ball_radius:
+            return "BLUE"
 
     def find_ball_location(self, frame):
         """
@@ -112,13 +148,20 @@ class BallDetector:
         mask = np.zeros(frame.shape[:2], dtype=np.uint8)
         points = np.array(self.selected_points, dtype=np.int32)
         cv2.fillPoly(mask, [points], 255)
+        self.quad_mask = mask
+        mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+        points = np.array(self.goal_masks[0], dtype=np.int32)
+        cv2.fillPoly(mask, [points], 255)
+        self.goal_masks[0] = mask
+        mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+        points = np.array(self.goal_masks[1], dtype=np.int32)
+        cv2.fillPoly(mask, [points], 255)
+        self.goal_masks[1] = mask
 
         # Create semi-transparent overlay for the quadrilateral
         overlay = frame.copy()
         cv2.polylines(overlay, [points], isClosed=True, color=(0, 255, 0), thickness=2)
         cv2.addWeighted(overlay, 0.3, frame, 0.7, 0, frame)
-
-        self.quad_mask = mask
 
     def calculate_perspective_transform(self):
         """
@@ -200,6 +243,8 @@ class BallDetector:
                 hsv_values = json.load(file)
                 self.lower_yellow = np.array(hsv_values["lower_yellow"], dtype=np.uint8)
                 self.upper_yellow = np.array(hsv_values["upper_yellow"], dtype=np.uint8)
+                self.lower_dark_yellow = np.array(hsv_values["lower_dark_yellow"], dtype=np.uint8)
+                self.upper_dark_yellow = np.array(hsv_values["upper_dark_yellow"], dtype=np.uint8)
                 print("Loaded HSV values from ball_cv_parameters.json")
         except FileNotFoundError:
             print("No HSV values file found. Using default values.")

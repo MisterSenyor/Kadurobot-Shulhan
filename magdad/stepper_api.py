@@ -24,36 +24,43 @@ class StepperHandler:
         self.arduino.write(f"STOP{self.stepper_type[-1]}\n".encode())
     
     def set_mm(self, mm):
-        print(f"SETTING TO {mm}, {MM_TO_STEPS(mm)}-----------------")
+        if DEBUG:
+            print(f"SETTING TO {mm}, {MM_TO_STEPS(mm)}-----------------")
         if 0 <= CV_MM_TO_STEPS(mm) <= MAX_TARGET:
             self.prev_pos = CV_MM_TO_STEPS(mm)
             self.arduino.write(f"SET{self.stepper_type[-1]} {self.reverse * CV_MM_TO_STEPS(mm)}\n".encode())
 
     def set_steps(self, steps):
-        print(f"SETTING {self.stepper_type} TO {steps} STEPS-----------------")
+        if DEBUG:
+            print(f"SETTING {self.stepper_type} TO {steps} STEPS-----------------")
         self.prev_pos = steps
         self.arduino.write(f"SET{self.stepper_type[-1]} {steps}\n".encode())
     
     def move_to_mm(self, mm):
-        print(f"MOVING TO {mm}, {MM_TO_STEPS(mm)}-----------------")
+        if DEBUG:
+            print(f"MOVING TO {mm}, {MM_TO_STEPS(mm)}-----------------")
         now = datetime.datetime.now()
         mm = CV_MM_TO_STEPS(mm)
-        print(f"{now}, {now if self.last_move is None else (now - self.last_move).total_seconds()}")
+        if DEBUG:
+            print(f"{now}, {now if self.last_move is None else (now - self.last_move).total_seconds()}")
         if (self.prev_pos is None or self.last_move is None) or (abs(mm - self.prev_pos) > 80 and (now - self.last_move).total_seconds() > 0.5):
             if 0 <= mm <= MAX_TARGET:
                 self.prev_pos = mm
                 self.last_move = now
                 self.arduino.write(f"{self.stepper_type} {self.reverse * mm}\n".encode())
         else:
-            print("Staying")
+            if DEBUG:
+                print("Staying")
 
     def move_to_steps(self, steps):
-        print(f"MOVING TO {steps}-----------------")
+        if DEBUG:
+            print(f"MOVING TO {steps}-----------------")
         self.prev_pos = steps
         self.arduino.write(f"{self.stepper_type} {steps}\n".encode())
         
     def move_to_deg(self, deg):
-        print(f"MOVING TO {deg}-----------------")
+        if DEBUG:
+            print(f"MOVING TO {deg}-----------------")
         now = datetime.datetime.now()
         if self.last_move is None or (now - self.last_move).total_seconds() > 0.12:
             self.set_steps(0)
@@ -64,7 +71,8 @@ class StepperHandler:
         self.arduino.write(motor.encode())
    
     def move_mm(self, mm, direction):
-        print(f"MOVING {mm} IN {direction} -----------------")
+        if DEBUG:
+            print(f"MOVING {mm} IN {direction} -----------------")
         if direction != self.direction:
             self.direction = direction
             self.arduino.write(direction.encode())

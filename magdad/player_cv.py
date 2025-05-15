@@ -2,6 +2,7 @@ import time
 import cv2
 import numpy as np
 import json
+import settings
 
 class PlayersDetector:
     """
@@ -154,10 +155,6 @@ class PlayersDetector:
                 x1, y1, x2, y2 = box
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Draw valid bounding boxes
 
-        cv2.imshow("Mask", mask)
-        processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
-        cv2.imshow("Processed", processed_frame)
-
         middles = []
         for valid_boxes_on_line in valid_boxes:
             middles_on_line = []
@@ -166,9 +163,12 @@ class PlayersDetector:
                 middle_x = (x1 + x2) // 2
                 middle_y = (y1 + y2) // 2
                 middles_on_line.append((middle_x, middle_y))
-                # cv2.circle(frame, (middle_x, middle_y), 5, (0, 255, 0), -1)
             middles.append(middles_on_line)
-        # return valid_boxes
+
+        if settings.DEBUG:
+            cv2.imshow("Mask", mask)
+            processed_frame = cv2.bitwise_and(frame, frame, mask=mask)
+            cv2.imshow("Processed", processed_frame)
         return middles
 
     def find_cluster_centers_along_lines(self, frame):

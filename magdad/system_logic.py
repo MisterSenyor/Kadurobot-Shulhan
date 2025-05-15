@@ -101,30 +101,26 @@ class SystemLogic:
                             i,
                             random=False):
         player_current_position = self.current_players_positions[i]
-        # moving_mms = ball_y % ((settings.BOARD_WIDTH_MM - settings.PLAYER_WIDTH_MM / 2) // 3)
         covering_players = []
         for i in range(len(settings.PLAYERS_RANGES)):
             start, end = settings.PLAYERS_RANGES[i]
             if start <= ball_y <= end:
                 covering_players.append(i)
         if len(covering_players) == 0:
-            print("No covering players")
+            if settings.DEBUG:
+                print("No covering players")
             return None
         covering_players_location = [
             player_current_position + i * settings.DISTANCE_BETWEEN_PLAYERS_MM for i in
             covering_players]
-        print(f"covering players are: {covering_players}")
         chosen_player = argmin(
             [abs(player_location - ball_y) for player_location in covering_players_location])
-        print(f"chosen player is at: {covering_players_location[chosen_player]}")
         # check about the half player constant if needed
         moving_mms = player_current_position + ball_y - covering_players_location[
             chosen_player] - settings.HALF_PLAYER_WIDTH_MM
         moving_mms = max(moving_mms, 0)
         if abs(moving_mms - player_current_position) < self.MIN_MOVE_DIST:
-            print(f"moving_mms: {moving_mms}, player_current_position: {player_current_position}")
             return None
-        print(f"moving_mms: {moving_mms}, player_current_position: {player_current_position}")
         self.current_players_positions[i] = moving_mms
         return moving_mms
 

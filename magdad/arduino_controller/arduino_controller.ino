@@ -55,23 +55,23 @@ void loop() {
         int spaceIndex = input.indexOf(' ');
         if (spaceIndex > 0) {
           int target = input.substring(spaceIndex + 1).toInt();
-          Serial.print("Asked to move to ");
+          // Serial.print("Asked to move to ");
           Serial.println(target);
           targets[motorIndex] = target;
           AccelStepper& motor = angularMotors[motorIndex];
           int pos = motor.currentPosition();
           if (motor.isRunning() && ((target < pos && pos < motor.targetPosition()) || (target > pos && pos > motor.targetPosition()))) {
-            Serial.println("Initiating stop (non-blocking)");
+            // Serial.println("Initiating stop (non-blocking)");
             motor.stop();                   // Initiate deceleration
             reversing[motorIndex] = 1;      // Flag for post-stop handling
           }
           else if (abs(target - motor.targetPosition()) > MIN_STEPS) {
           // if (abs(target - motor.targetPosition()) > MIN_STEPS) {
             motor.moveTo(target);
-            Serial.print("Moving ANG");
-            Serial.print(motorIndex);
-            Serial.print(" to ");
-            Serial.println(target);
+            // Serial.print("Moving ANG");
+            // Serial.print(motorIndex);
+            // Serial.print(" to ");
+            // Serial.println(target);
           }
         }
       } else {
@@ -100,10 +100,10 @@ void loop() {
           int pos = input.substring(spaceIndex + 1).toInt();
           AccelStepper& motor = angularMotors[motorIndex];
           motor.setCurrentPosition(pos);
-          Serial.print("Setting MOT");
-          Serial.print(motorIndex);
-          Serial.print(" to ");
-          Serial.println(pos);
+          // Serial.print("Setting MOT");
+          // Serial.print(motorIndex);
+          // Serial.print(" to ");
+          // Serial.println(pos);
         }
       }
       else {
@@ -119,10 +119,10 @@ void loop() {
       if (reversing[i] && !motor.isRunning()) {
         reversing[i] = 0;
         motor.moveTo(targets[i]);  // Now safe to reverse direction
-        Serial.print("Stopped. Now reversing ANG");
-        Serial.print(i);
-        Serial.print(" to ");
-        Serial.println(targets[i]);
+        // Serial.print("Stopped. Now reversing ANG");
+        // Serial.print(i);
+        // Serial.print(" to ");
+        // Serial.println(targets[i]);
       }
   }
 }

@@ -2,6 +2,8 @@ import random
 import cv2
 import time
 import json
+
+import keyboard
 import numpy as np
 import requests
 from ball_tracker import BallTracker
@@ -164,7 +166,8 @@ class BallTrackingSystem:
 
     def run_tracking_live(self):
         self.initialize_perspective()
-        self.ball_handler.create_windows()
+        if settings.DEBUG:
+            self.ball_handler.create_windows()
         print("🎮 Press 'r' to record, 's' to stop, 'q' to quit.")
         while True:
             self.frame_idx += 1
@@ -172,14 +175,13 @@ class BallTrackingSystem:
             if frame is None or frame.shape[0] <= 1 or frame.shape[1] <= 1:
                 continue
 
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("q"):
+            if keyboard.is_pressed("q"):
                 break
-            elif key == ord("r") and not self.recording:
+            elif keyboard.is_pressed("r") and not self.recording:
                 self.start_recording(frame)
-            elif key == ord("s") and self.recording:
+            elif keyboard.is_pressed("s") and self.recording:
                 self.stop_recording()
-            elif key == ord("g"):  # set position to match CV mm
+            elif keyboard.is_pressed("g"):  # set position to match CV mm
                 player_middles = self.player_handler.find_shapes_on_lines(frame)
                 first_goalie = player_middles[0][2]
                 first_goalie_mm = self.ball_handler.apply_perspective_transform(*first_goalie)
@@ -188,7 +190,7 @@ class BallTrackingSystem:
                 time.sleep(0.05)
                 self.linear_stepper_handler.move_to_mm(73)
                 time.sleep(0.05)
-            elif key == ord("z"): # set position to match CV mm
+            elif keyboard.is_pressed("z"): # set position to match CV mm
                 player_middles = self.player_handler.find_shapes_on_lines(frame)
                 first_goalie = player_middles[0][2]
                 first_goalie_mm = self.ball_handler.apply_perspective_transform(*first_goalie)
@@ -197,15 +199,20 @@ class BallTrackingSystem:
                 time.sleep(0.05)
                 self.linear_stepper_handler.move_to_mm(0)
                 time.sleep(0.05)
-            elif key == ord("t"):
+            elif keyboard.is_pressed("t"):
                 self.linear_stepper_handler.move_to_steps(-1 * random.randint(90, 620))
                 time.sleep(0.5)
                 print(f"{first_goalie=}\t{first_goalie_mm=}")
                 self.linear_stepper_handler.set_mm(first_goalie_mm[1])
-            elif key in [ord("j"), ord("k"), ord("l")]:
-                stepper = self.steppers["angular"][[ord("j"), ord("k"), ord("l")].index(key)]
-                stepper.set_steps(0)
-                stepper.move_to_steps(stepper.reverse * 90)
+            elif keyboard.is_pressed("j"):
+                stepper = self.steppers["angular"][0]
+                stepper.move_to_deg(80)
+            elif keyboard.is_pressed("k"):
+                stepper = self.steppers["angular"][1]
+                stepper.move_to_deg(80)
+            elif keyboard.is_pressed("l"):
+                stepper = self.steppers["angular"][2]
+                stepper.move_to_deg(80)
 
 
             coordinates = self.ball_handler.find_ball_location(frame)[:2]

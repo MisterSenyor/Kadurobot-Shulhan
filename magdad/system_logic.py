@@ -18,7 +18,8 @@ class SystemLogic:
         self.goalkeeper_row = goalkeeper_row
         self.player_rows = [self.aggressive_row, self.middle_row, self.goalkeeper_row]
         self.current_players_positions = [0, 0, 0]
-        self.MIN_KICK_DIST = 0.1
+        self.MIN_KICK_DIST = [40, 15]
+        # self.MIN_KICK_DIST = [100000, 100000]
         self.MIN_MOVE_DIST = 10
         self.THIRD = settings.BOARD_WIDTH_MM / 3
 
@@ -84,9 +85,8 @@ class SystemLogic:
         x2, y2 = line[1]
 
         # Calculate the distance from the ball to the line segment
-        num = abs((y2 - y1) * ball_x - (x2 - x1) * ball_y + x2 * y1 - y2 * x1)
-        denom = np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2)
-        return num / denom ** 2
+        avg_x = (x1 + x2) / 2
+        return abs(avg_x - ball_x)  # Simplified for horizontal line
 
     @staticmethod
     def closest_endpoint(pred_point, line):
@@ -124,9 +124,21 @@ class SystemLogic:
         self.current_players_positions[i] = moving_mms
         return moving_mms
 
-    def get_angular_movement(self, ball_coordinates, player_row):
+    @staticmethod
+    def calculate_distance_ball_to_point_array(points, ball_coordinates):
+        # get the min distances of the ball's y value from points
         ball_x, ball_y = ball_coordinates
-        distance = self.calculate_distance_ball_to_line(player_row, (ball_x, ball_y))
-        if distance > self.MIN_KICK_DIST:
+        distances = [abs(ball_y - point[1]) for point in points]
+        return min(distances)
+
+    def get_angular_movement(self, ball_coordinates, row_middles, line):
+        ball_x, ball_y = ball_coordinates
+        distance1 = self.calculate_distance_ball_to_line(line, (ball_x, ball_y))
+        if distance1 > self.MIN_KICK_DIST[0]:
             return None
+        if row_middles is not None:
+            distance2 = self.calculate_distance_ball_to_point_array(row_middles, (ball_x, ball_y))
+            print(f"{ball_coordinates=}\n{line=}\n{row_middles=}\n{distance1=}\n{distance2=}")
+            if distance2 > self.MIN_KICK_DIST[1]:
+                return None
         return 360

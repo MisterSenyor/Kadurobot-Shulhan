@@ -194,7 +194,6 @@ class BallTrackingSystem:
             self.offensive_state(frame, coordinates, player_middles)
 
     def check_goal(self, frame):
-        print("check goal was called")
         # if we score a goal
         # last_seen_on = self.tracker.get_last_seen_position()
         # if last_seen_on is None:
@@ -259,7 +258,7 @@ class BallTrackingSystem:
                 # if the ball is in the kick range
                 if self.system_logic.calculate_distance_ball_to_line(transformed_row, transformed_coords) < 2 * \
                         self.system_logic.MIN_KICK_DIST[0]:
-                    linear_stepper.move_to_mm(transformed_coords[1],
+                    linear_stepper.move_to_mm(self.system_logic.calculate_moving_mms(i, transformed_coords[1]),
                                               force=True)  # force bypass min-step limit since it might be close
                 # if ball is far and not intersecting, return to middle
                 else:

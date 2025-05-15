@@ -130,7 +130,7 @@ class BallDetector:
             frame = param
             hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             hsv_value = hsv_frame[y, x]
-            print(f"HSV Value at ({x}, {y}): {hsv_value}")
+            print(f"HSV Value at ({x}, {y}) ({self.apply_perspective_transform(x, y)}): {hsv_value}")
 
         elif event == cv2.EVENT_RBUTTONDOWN and len(self.selected_points) < 4:
             self.selected_points.append((x, y))

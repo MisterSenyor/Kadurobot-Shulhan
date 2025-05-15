@@ -43,7 +43,7 @@ class StepperHandler:
         mm = CV_MM_TO_STEPS(mm)
         if DEBUG:
             print(f"{now}, {now if self.last_time is None else (now - self.last_time).total_seconds()}")
-        if force or ((self.prev_pos is None or self.last_time is None) or (abs(mm - self.prev_pos) > 30 and (now - self.last_time).total_seconds() > 0.5)):
+        if (force or (self.prev_pos is None or (abs(mm - self.prev_pos) > 15)) and (self.last_time is None or (now - self.last_time).total_seconds() > 0.3)):
             if 0 <= mm <= MAX_TARGET:
                 self.prev_pos = mm
                 self.last_time = now
@@ -62,7 +62,7 @@ class StepperHandler:
         if DEBUG:
             print(f"MOVING TO {deg}-----------------")
         now = datetime.datetime.now()
-        if self.last_time is None or (now - self.last_time).total_seconds() > 0.2:
+        if self.last_time is None or (now - self.last_time).total_seconds() > 0.3:
             self.set_steps(0)
             self.last_time = now
             self.arduino.write(f"{self.stepper_type} {self.reverse * round(deg / self.DEG_PER_STEP)}\n".encode())

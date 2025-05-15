@@ -18,7 +18,7 @@ class SystemLogic:
         self.goalkeeper_row = goalkeeper_row
         self.player_rows = [self.aggressive_row, self.middle_row, self.goalkeeper_row]
         self.current_players_positions = [0, 0, 0]
-        self.MIN_KICK_DIST = [45, 15]
+        self.MIN_KICK_DIST = [50, 30]
         # self.MIN_KICK_DIST = [100000, 100000]
         self.MIN_MOVE_DIST = 10
         self.THIRD = settings.BOARD_WIDTH_MM / 3
@@ -97,9 +97,7 @@ class SystemLogic:
         dist_end = (px - ex) ** 2 + (py - ey) ** 2
         return line[0] if dist_start < dist_end else line[1]
 
-    def get_linear_movement(self, ball_y,
-                            i,
-                            random=False):
+    def calculate_moving_mms(self, i, ball_y):
         player_current_position = self.current_players_positions[i]
         covering_players = []
         for i in range(len(settings.PLAYERS_RANGES)):
@@ -119,6 +117,14 @@ class SystemLogic:
         moving_mms = player_current_position + ball_y - covering_players_location[
             chosen_player] - settings.HALF_PLAYER_WIDTH_MM
         moving_mms = max(moving_mms, 0)
+        return moving_mms
+
+    def get_linear_movement(self, ball_y,
+                            i,
+                            random=False):
+        player_current_position = self.current_players_positions[i]
+
+        moving_mms = self.calculate_moving_mms(i, ball_y)
         if abs(moving_mms - player_current_position) < self.MIN_MOVE_DIST:
             return None
         self.current_players_positions[i] = moving_mms
@@ -141,4 +147,4 @@ class SystemLogic:
             # print(f"{ball_coordinates=}\n{line=}\n{row_middles=}\n{distance1=}\n{distance2=}")
             if distance2 > self.MIN_KICK_DIST[1]:
                 return None
-        return 360
+        return 720

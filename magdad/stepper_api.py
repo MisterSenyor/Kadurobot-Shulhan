@@ -6,7 +6,7 @@ from settings import *
 
 
 class StepperHandler:
-    def __init__(self, arduino_serial, stepper_type=LINEAR_STEPPER, calibration=LINEAR_STEPPER, timer=False, reverse = 1):
+    def __init__(self, arduino_serial, stepper_type=LINEAR_STEPPER, calibration=LINEAR_STEPPER, reverse=1):
         self.arduino = arduino_serial
         self.direction = DIR_UP
         self.stepper_type = stepper_type
@@ -39,7 +39,7 @@ class StepperHandler:
         now = datetime.datetime.now()
         mm = CV_MM_TO_STEPS(mm)
         print(f"{now}, {now if self.last_move is None else (now - self.last_move).total_seconds()}")
-        if (self.prev_pos is None or self.last_move is None) or (abs(mm - self.prev_pos) > 80 and (now - self.last_move).total_seconds() > 1):
+        if (self.prev_pos is None or self.last_move is None) or (abs(mm - self.prev_pos) > 80 and (now - self.last_move).total_seconds() > 0.5):
             if 0 <= mm <= MAX_TARGET:
                 self.prev_pos = mm
                 self.last_move = now
@@ -54,7 +54,11 @@ class StepperHandler:
         
     def move_to_deg(self, deg):
         print(f"MOVING TO {deg}-----------------")
-        self.arduino.write(f"{self.stepper_type} {self.reverse * round(deg / self.DEG_PER_STEP)}\n".encode())
+        now = datetime.datetime.now()
+        if self.last_move is None or (now - self.last_move).total_seconds() > 0.12:
+            self.set_steps(0)
+            self.last_move = now
+            self.arduino.write(f"{self.stepper_type} {self.reverse * round(deg / self.DEG_PER_STEP)}\n".encode())
     
     def set_stepper(self, motor):
         self.arduino.write(motor.encode())

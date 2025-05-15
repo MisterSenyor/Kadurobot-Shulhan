@@ -125,7 +125,6 @@ class BallTrackingSystem:
             # Kick
             angular_movement = self.system_logic.get_angular_movement(transformed_coords, row)
             if angular_movement is not None:
-                angular_stepper.set_steps(0)
                 angular_stepper.move_to_deg(angular_movement)
 
             # Predict intersection
@@ -203,6 +202,11 @@ class BallTrackingSystem:
                 time.sleep(0.5)
                 print(f"{first_goalie=}\t{first_goalie_mm=}")
                 self.linear_stepper_handler.set_mm(first_goalie_mm[1])
+            elif key in [ord("j"), ord("k"), ord("l")]:
+                stepper = self.steppers["angular"][[ord("j"), ord("k"), ord("l")].index(key)]
+                stepper.set_steps(0)
+                stepper.move_to_steps(stepper.reverse * 90)
+
 
             coordinates = self.ball_handler.find_ball_location(frame)[:2]
             if coordinates is not None and not None in coordinates:

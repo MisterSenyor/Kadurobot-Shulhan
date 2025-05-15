@@ -133,4 +133,4 @@ class SystemLogic:
         distance = self.calculate_distance_ball_to_line(player_row, (ball_x, ball_y))
         if distance > self.MIN_KICK_DIST:
             return None
-        return 720
+        return 360

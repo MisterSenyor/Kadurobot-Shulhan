@@ -3,6 +3,7 @@ from collections import deque
 import numpy as np
 
 MIN_MOVEMENT = 7
+MIN_VELOCITY = 1
 
 class BallTracker:
     def __init__(self, max_history=5):
@@ -89,7 +90,7 @@ class BallTracker:
         dx, dy = self.get_velocity()
         norm = np.hypot(dx, dy)
 
-        if norm < 1e-6:
+        if norm < MIN_VELOCITY:
             return None  # Movement too small to determine direction
 
         unit_dx = dx / norm
@@ -99,3 +100,6 @@ class BallTracker:
         end = (start[0] + unit_dx * 1000, start[1] + unit_dy * 1000)  # 600 pixels forward
 
         return (int(start[0]), int(start[1])), (int(end[0]), int(end[1]))
+
+    def get_last_seen_position(self):
+        return self.positions[-1][:2] if self.positions else None

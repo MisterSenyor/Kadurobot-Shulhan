@@ -13,6 +13,10 @@ import stepper_api
 import settings
 import serial
 from system_logic import SystemLogic
+import pygame
+import time
+import pyttsx3
+import threading
 
 ANG_DELAY = 0.2
 
@@ -48,6 +52,83 @@ class BallTrackingSystem:
             self.source = json_data["path"]
         else:
             self.source = 1
+
+        self.goal = False
+        self.our_goals = 0
+        self.enemy_goals = 0
+
+        # Initialize audio and TTS
+        pygame.mixer.init()
+        self.engine = pyttsx3.init()
+
+        # Load sound files
+        self.HAPPY_SOUND = "goal_celebration.mp3"  # Replace with your happy sound file
+        self.SAD_SOUND = "goal_mourning.mp3"  # Replace with your sad sound file
+
+    @staticmethod
+    def play_music_for_2_seconds(filename):
+        pygame.mixer.music.load(filename)
+        pygame.mixer.music.play()
+        time.sleep(2.5)
+        pygame.mixer.music.stop()
+
+    def celebrate_win(self):
+        print("✅ WIN! Saying message and playing happy sound.")
+        self.engine.say("Great goal! The score is " + str(self.our_goals) + " to " + str(self.enemy_goals))
+        self.engine.runAndWait()
+
+        threading.Thread(target=self.play_music_for_2_seconds, args=(self.HAPPY_SOUND,), daemon=True).start()
+        self.win_dance()
+
+    def win_dance(self):
+        for i in range(3):
+            linear_stepper = self.steppers["linear"][i]
+            linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
+        time.sleep(0.2)
+        for i in range(3):
+            linear_stepper = self.steppers["linear"][i]
+            linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM + 50)
+        for i in range(3):
+            angular_stepper = self.steppers["angular"][i]
+            angular_stepper.move_to_deg(360)
+        time.sleep(0.2)
+
+        for i in range(3):
+            linear_stepper = self.steppers["linear"][i]
+            linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM - 50)
+        for i in range(3):
+            angular_stepper = self.steppers["angular"][i]
+            angular_stepper.move_to_deg(360)
+        time.sleep(0.2)
+        for i in range(3):
+            linear_stepper = self.steppers["linear"][i]
+            linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
+        time.sleep(0.2)
+
+    def mourn_loss(self):
+        print("❌ LOSS! Saying message and playing sad sound.")
+        self.engine.say("Oh no... we missed! The score is " + str(self.our_goals) + " to " + str(self.enemy_goals))
+        self.engine.runAndWait()
+
+        threading.Thread(target=self.play_music_for_2_seconds, args=(self.SAD_SOUND,), daemon=True).start()
+
+    # def celebrate_win(self):
+    #     print("✅ WIN! Saying message and playing happy sound.")
+    #     self.engine.say("Great goal!")
+    #     self.engine.runAndWait()
+    #     self.win_dance()
+    #     pygame.mixer.music.load(self.HAPPY_SOUND)
+    #     pygame.mixer.music.play()
+    #     time.sleep(5)
+    #
+    # def mourn_loss(self):
+    #     print("❌ LOSS! Saying message and playing sad sound.")
+    #     self.engine.say("Oh no... we missed!")
+    #     self.engine.runAndWait()
+    #
+    #     pygame.mixer.music.load(self.SAD_SOUND)
+    #     pygame.mixer.music.play()
+    #     time.sleep(5)
 
     @staticmethod
     def initialize_steppers():
@@ -117,14 +198,59 @@ class BallTrackingSystem:
                                         row in self.player_rows]
 
     def manage_game(self, frame, coordinates, player_middles):
-        # analyze coordinates (and maybe ball_handler) to determine which state to go into
-        self.offensive_state(frame, coordinates, player_middles)
+        # check and handle goal
+        if coordinates is None or None in coordinates:
+            if not self.goal:
+                self.check_goal()
+            return
+        self.goal = False
+        if coordinates and None not in coordinates:
+            self.offensive_state(frame, coordinates, player_middles)
+
+    def check_goal(self):
+        print("check goal was called")
+        # if we score a goal
+        last_seen_on = self.tracker.get_last_seen_position()
+        if last_seen_on is None:
+            return
+        transformed_last_seen = self.ball_handler.apply_perspective_transform(*last_seen_on)
+        if transformed_last_seen[0] < 50:
+            self.goal = True
+            print("GOALLLLLL")
+            self.our_goals += 1
+            print("Goals: ", self.our_goals, ":", self.enemy_goals)
+            self.celebrate_win()
+        # if they score a goal
+        elif transformed_last_seen[0] > 535:
+            self.goal = True
+            print("goallllll")
+            self.enemy_goals += 1
+            print("Goals: ", self.our_goals, ":", self.enemy_goals)
+            self.mourn_loss()
+
+    def goto_default_state(self, coordinates):
+        # if the ball is at the front of the field
+        transformed_coords = self.ball_handler.apply_perspective_transform(*coordinates)
+        if coordinates[1] < 170:
+            linear_stepper = self.steppers["linear"][2]
+            linear_stepper.move_to_mm(0)
+            linear_stepper = self.steppers["linear"][1]
+            linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
+            linear_stepper = self.steppers["linear"][0]
+            linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
+        elif coordinates[1] < 350:
+            linear_stepper = self.steppers["linear"][1]
+            linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
+            linear_stepper = self.steppers["linear"][0]
+            linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
+        else:
+            linear_stepper = self.steppers["linear"][0]
+            linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
 
     def offensive_state(self, frame, coordinates, player_middles):
         line = self.tracker.get_last_line()
         # Loop for all 3 rows
         for i in range(3):
-            print(f"ROW {i} ~~~~~~~~~~~~~")
             # Setup
             row = self.player_rows[i]
             transformed_row = self.transformed_player_rows[i]
@@ -132,24 +258,26 @@ class BallTrackingSystem:
             linear_stepper = self.steppers["linear"][i]
             transformed_coords = self.ball_handler.apply_perspective_transform(*coordinates)
             transformed_player_middles = None
-            if len(player_middles) > i: # to make sure that the row exists
+            if len(player_middles) > i:  # to make sure that the row exists
                 transformed_player_middles = [self.ball_handler.apply_perspective_transform(*middle) for middle in
                                               player_middles[i]]
 
             # Kick
             angular_movement = self.system_logic.get_angular_movement(transformed_coords, transformed_player_middles,
                                                                       transformed_row)
-            if angular_movement is not None: # if the ball is in the kick range
+            if angular_movement is not None:  # if the ball is in the kick range
                 angular_stepper.move_to_deg(angular_movement)
             # Predict intersection
             prediction = self.system_logic.predict_intersection(line, row)
             if prediction is None:
                 # if the ball is in the kick range
-                if self.system_logic.calculate_distance_ball_to_line(transformed_row, transformed_coords) < 2 * self.system_logic.MIN_KICK_DIST[0]:
-                    linear_stepper.move_to_mm(transformed_coords[1], force=True) # force bypass min-step limit since it might be close
+                if self.system_logic.calculate_distance_ball_to_line(transformed_row, transformed_coords) < 2 * \
+                        self.system_logic.MIN_KICK_DIST[0]:
+                    linear_stepper.move_to_mm(transformed_coords[1],
+                                              force=True)  # force bypass min-step limit since it might be close
                 # if ball is far and not intersecting, return to middle
                 else:
-                    linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
+                    linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM + ((i - 1) * 10))
                 continue
             _, trans_pred_y = self.ball_handler.apply_perspective_transform(*prediction)
             target_mm = self.system_logic.get_linear_movement(trans_pred_y, i)
@@ -239,7 +367,7 @@ class BallTrackingSystem:
             if coordinates is not None and not None in coordinates:
                 self.tracker.update_position(coordinates[:2])
             # play with the number of the frames
-            if self.frame_idx % 5 == 0 and None not in coordinates:
+            if self.frame_idx % 5 == 0:
                 self.frame_idx = 0
                 player_middles = self.player_handler.find_shapes_on_lines(frame)
                 self.manage_game(frame, coordinates, player_middles)

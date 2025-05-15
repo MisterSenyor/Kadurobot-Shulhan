@@ -138,7 +138,7 @@ class SystemLogic:
             return None
         if row_middles is not None:
             distance2 = self.calculate_distance_ball_to_point_array(row_middles, (ball_x, ball_y))
-            print(f"{ball_coordinates=}\n{line=}\n{row_middles=}\n{distance1=}\n{distance2=}")
+            # print(f"{ball_coordinates=}\n{line=}\n{row_middles=}\n{distance1=}\n{distance2=}")
             if distance2 > self.MIN_KICK_DIST[1]:
                 return None
         return 360

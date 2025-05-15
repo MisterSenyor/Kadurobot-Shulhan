@@ -20,10 +20,6 @@ class BallTracker:
             self.gone = True
             return
         
-        if self.resting:
-            self.resting = False
-        if self.gone:
-            self.gone = False
         # check if the ball has moved significantly
         if self.positions:
             last_x, last_y, last_t = self.positions[-1]
@@ -33,6 +29,10 @@ class BallTracker:
             if distance < MIN_MOVEMENT:
                 self.resting = True
                 return
+            if self.resting:
+                self.resting = False
+            if self.gone:
+                self.gone = False
         if len(self.positions) >= self.max_history:
             self.positions.pop(0)
         self.positions.append((x, y, time.time()))
@@ -43,7 +43,7 @@ class BallTracker:
         return self.positions[-1][:2]
 
     def get_velocity(self):
-        if len(self.positions) < 2:
+        if len(self.positions) < 2 or self.resting:
             return None, None
 
         vx_list = []
@@ -83,7 +83,7 @@ class BallTracker:
         return predicted_x
 
     def get_last_line(self):
-        if len(self.positions) < 2:
+        if len(self.positions) < 2 or self.resting:
             return None
 
         dx, dy = self.get_velocity()

@@ -137,11 +137,13 @@ class BallTrackingSystem:
                                                                       transformed_row)
             if angular_movement is not None:
                 angular_stepper.move_to_deg(angular_movement)
-
             # Predict intersection
             prediction = self.system_logic.predict_intersection(line, row)
             if prediction is None:
-                linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
+                if self.system_logic.calculate_distance_ball_to_line(transformed_row, transformed_coords) < 2 * self.system_logic.MIN_KICK_DIST[0]:
+                    linear_stepper.move_to_mm(transformed_coords[1])
+                else:
+                    linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
                 continue
             _, trans_pred_y = self.ball_handler.apply_perspective_transform(*prediction)
             target_mm = self.system_logic.get_linear_movement(trans_pred_y, i)

@@ -12,7 +12,7 @@ class StepperHandler:
         self.stepper_type = stepper_type
         self.reverse = reverse
         self.prev_pos = None
-        self.last_move = None
+        self.last_time = None
         time.sleep(1)  # Wait for the connection to establish
         self.arduino.write(self.direction.encode())
         self.DEG_PER_STEP = DEG_PER_STEP_LIN if calibration == LINEAR_STEPPER else DEG_PER_STEP_ANG
@@ -36,17 +36,17 @@ class StepperHandler:
         self.prev_pos = steps
         self.arduino.write(f"SET{self.stepper_type[-1]} {steps}\n".encode())
     
-    def move_to_mm(self, mm):
+    def move_to_mm(self, mm, force=False):
         if DEBUG:
             print(f"MOVING TO {mm}, {MM_TO_STEPS(mm)}-----------------")
         now = datetime.datetime.now()
         mm = CV_MM_TO_STEPS(mm)
         if DEBUG:
-            print(f"{now}, {now if self.last_move is None else (now - self.last_move).total_seconds()}")
-        if (self.prev_pos is None or self.last_move is None) or (abs(mm - self.prev_pos) > 80 and (now - self.last_move).total_seconds() > 0.5):
+            print(f"{now}, {now if self.last_time is None else (now - self.last_time).total_seconds()}")
+        if force or ((self.prev_pos is None or self.last_time is None) or (abs(mm - self.prev_pos) > 30 and (now - self.last_time).total_seconds() > 0.5)):
             if 0 <= mm <= MAX_TARGET:
                 self.prev_pos = mm
-                self.last_move = now
+                self.last_time = now
                 self.arduino.write(f"{self.stepper_type} {self.reverse * mm}\n".encode())
         else:
             if DEBUG:
@@ -62,9 +62,9 @@ class StepperHandler:
         if DEBUG:
             print(f"MOVING TO {deg}-----------------")
         now = datetime.datetime.now()
-        if self.last_move is None or (now - self.last_move).total_seconds() > 0.15:
+        if self.last_time is None or (now - self.last_time).total_seconds() > 0.15:
             self.set_steps(0)
-            self.last_move = now
+            self.last_time = now
             self.arduino.write(f"{self.stepper_type} {self.reverse * round(deg / self.DEG_PER_STEP)}\n".encode())
     
     def set_stepper(self, motor):

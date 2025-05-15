@@ -18,7 +18,7 @@ class SystemLogic:
         self.goalkeeper_row = goalkeeper_row
         self.player_rows = [self.aggressive_row, self.middle_row, self.goalkeeper_row]
         self.current_players_positions = [0, 0, 0]
-        self.MIN_KICK_DIST = [40, 15]
+        self.MIN_KICK_DIST = [45, 15]
         # self.MIN_KICK_DIST = [100000, 100000]
         self.MIN_MOVE_DIST = 10
         self.THIRD = settings.BOARD_WIDTH_MM / 3

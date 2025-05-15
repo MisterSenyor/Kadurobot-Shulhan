@@ -15,7 +15,7 @@
 // #define ACCELERATION 40000  // good for linear
 #define MAX_SPEED 6000 // good for angular
 #define ACCELERATION 40000  // good for angular
-#define MIN_STEPS 80
+#define MIN_STEPS 30
 #define DIR(X) ((X - motor.targetPosition()) / abs(X - motor.targetPosition()))
 
 // === Create 3 Angular Stepper Instances ===

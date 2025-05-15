@@ -117,6 +117,10 @@ class BallTrackingSystem:
                                         row in self.player_rows]
 
     def manage_game(self, frame, coordinates, player_middles):
+        # analyze coordinates (and maybe ball_handler) to determine which state to go into
+        self.offensive_state(frame, coordinates, player_middles)
+
+    def offensive_state(self, frame, coordinates, player_middles):
         line = self.tracker.get_last_line()
         # Loop for all 3 rows
         for i in range(3):

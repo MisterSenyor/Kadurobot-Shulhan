@@ -128,20 +128,22 @@ class BallTrackingSystem:
             linear_stepper = self.steppers["linear"][i]
             transformed_coords = self.ball_handler.apply_perspective_transform(*coordinates)
             transformed_player_middles = None
-            if len(player_middles) > i:
+            if len(player_middles) > i: # to make sure that the row exists
                 transformed_player_middles = [self.ball_handler.apply_perspective_transform(*middle) for middle in
                                               player_middles[i]]
 
             # Kick
             angular_movement = self.system_logic.get_angular_movement(transformed_coords, transformed_player_middles,
                                                                       transformed_row)
-            if angular_movement is not None:
+            if angular_movement is not None: # if the ball is in the kick range
                 angular_stepper.move_to_deg(angular_movement)
             # Predict intersection
             prediction = self.system_logic.predict_intersection(line, row)
             if prediction is None:
+                # if the ball is in the kick range
                 if self.system_logic.calculate_distance_ball_to_line(transformed_row, transformed_coords) < 2 * self.system_logic.MIN_KICK_DIST[0]:
-                    linear_stepper.move_to_mm(transformed_coords[1])
+                    linear_stepper.move_to_mm(transformed_coords[1], force=True) # force bypass min-step limit since it might be close
+                # if ball is far and not intersecting, return to middle
                 else:
                     linear_stepper.move_to_mm(settings.MIDDLE_LOCATION_MM)
                 continue

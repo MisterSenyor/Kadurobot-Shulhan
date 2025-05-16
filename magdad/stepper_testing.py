@@ -52,7 +52,7 @@ while True:
             time.sleep(0.05)
         
         elif keyboard.is_pressed("s"):
-            # current_lin.move_to_steps(200)
+            current_lin.move_to_steps(200)
             # current_ang.set_steps(0)
             time.sleep(0.05)
             current_ang.move_to_deg(360)

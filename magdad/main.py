@@ -201,14 +201,12 @@ class BallTrackingSystem:
         goal_type = self.ball_handler.is_ball_in_goal(frame)
         if goal_type == "BLUE":
             self.goal = True
-            print("GOALLLLLL")
             self.our_goals += 1
             print("Goals: ", self.our_goals, ":", self.enemy_goals)
             self.celebrate_win()
         # if they score a goal
         elif goal_type == "RED":
             self.goal = True
-            print("goallllll")
             self.enemy_goals += 1
             print("Goals: ", self.our_goals, ":", self.enemy_goals)
             self.mourn_loss()
@@ -254,10 +252,12 @@ class BallTrackingSystem:
                 angular_stepper.move_to_deg(angular_movement)
             # Predict intersection
             prediction = self.system_logic.predict_intersection(line, row)
-            if prediction is None:
+            if prediction is None or self.tracker.resting:
                 # if the ball is in the kick range
                 if self.system_logic.calculate_distance_ball_to_line(transformed_row, transformed_coords) < 2 * \
                         self.system_logic.MIN_KICK_DIST[0]:
+                    if settings.DEBUG:
+                        print("short call")
                     linear_stepper.move_to_mm(self.system_logic.calculate_moving_mms(i, transformed_coords[1]),
                                               force=True)  # force bypass min-step limit since it might be close
                 # if ball is far and not intersecting, return to middle
